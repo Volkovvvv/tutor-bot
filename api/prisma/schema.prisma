@@ -1,0 +1,240 @@
+// Схема БД «Репетитор CRM».
+//
+// Два сквозных правила, на которых держится всё остальное:
+//
+// 1. Деньги — целые копейки (Int). Ни одного Float: 1500.00 руб. во float
+//    рано или поздно превращается в 1499.9999999 и ломает отчёты.
+// 2. Всё, что принадлежит репетитору, скоупится по tutorId. Ни один запрос
+//    к API не должен доставать строку, не проверив владельца.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Prisma 7: строка подключения живёт в prisma.config.ts,
+// а рантайм получает её через адаптер драйвера (src/prisma/prisma.service.ts).
+datasource db {
+  provider = "postgresql"
+}
+
+// ─── Люди ────────────────────────────────────────────────────────────────
+
+// Аккаунт Telegram. Один и тот же человек может быть и репетитором,
+// и чьим-то учеником одновременно, поэтому роль живёт не здесь,
+// а в связях: Tutor (владелец кабинета) и Student (карточка у репетитора).
+model User {
+  id        String   @id @default(uuid())
+  // BigInt обязателен: Telegram ID давно вышел за пределы int32.
+  tgId      BigInt   @unique
+  username  String?
+  firstName String
+  lastName  String?
+  photoUrl  String?
+  // Таймзона решает, во сколько по-настоящему наступает «16:00»
+  // и когда планировщику слать напоминание.
+  timezone  String   @default("Europe/Moscow")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tutorProfile Tutor?
+  studentCards Student[] @relation("StudentUser")
+
+  @@map("users")
+}
+
+// Кабинет репетитора — корень владения данными.
+model Tutor {
+  id        String   @id @default(uuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  students Student[]
+  lessons  Lesson[]
+
+  @@map("tutors")
+}
+
+// ─── Ученики ─────────────────────────────────────────────────────────────
+
+// Карточка ученика в кабинете репетитора.
+//
+// userId = null — нормальное состояние: репетитор завёл ученика вручную,
+// знает имя и цену, но канала связи ещё нет. Писать в Telegram можно
+// только после того, как ученик сам нажал /start и userId проставился.
+model Student {
+  id      String @id @default(uuid())
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  userId String?
+  user   User?   @relation("StudentUser", fields: [userId], references: [id], onDelete: SetNull)
+
+  // Имя в том виде, в каком его записал репетитор: оно может
+  // отличаться от имени в Telegram («Аня 8 класс»).
+  name         String
+  // Цена занятия по умолчанию, в копейках. При создании занятия
+  // копируется в Lesson.price — см. комментарий там.
+  price        Int
+  note         String?
+  source       StudentSource @default(MANUAL)
+  inviteStatus InviteStatus  @default(NONE)
+
+  // Мягкое удаление: убрать ученика из списка, не потеряв
+  // историю занятий и денег за прошлые месяцы.
+  archivedAt DateTime?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+
+  notify  NotifySettings?
+  lessons Lesson[]
+  invites Invite[]
+
+  // Список учеников кабинета — самый частый запрос в приложении.
+  @@index([tutorId, archivedAt])
+  // Один и тот же человек не может быть заведён у репетитора дважды.
+  @@unique([tutorId, userId])
+  @@map("students")
+}
+
+// Настройки напоминаний конкретного ученика. Их применяет планировщик.
+model NotifySettings {
+  studentId String  @id
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  enabled Boolean @default(true)
+  // За сколько часов до занятия прислать первое напоминание.
+  beforeHours   Int @default(24)
+  // Второе напоминание за N минут до начала; 0 — выключено.
+  beforeMinutes Int @default(60)
+  // Напоминать о прошедших неоплаченных занятиях.
+  debtReminder  Boolean @default(true)
+
+  // Окно тишины в локальном времени ученика: "22:00"–"09:00".
+  // Строки, а не время: важны только часы и минуты, без даты.
+  quietFrom String @default("22:00")
+  quietTo   String @default("09:00")
+
+  updatedAt DateTime @updatedAt
+
+  @@map("notify_settings")
+}
+
+// ─── Занятия ─────────────────────────────────────────────────────────────
+
+model Lesson {
+  id String @id @default(uuid())
+
+  // Денормализация: почти каждая выборка идёт «все занятия репетитора
+  // за период». Без этого поля пришлось бы join'ить students в каждом запросе.
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Абсолютный момент начала (timestamptz). Планировщику нужен именно он:
+  // строка "16:00" ничего не значит, пока неизвестна таймзона.
+  startsAt DateTime
+  // Длительность в минутах — нужна, чтобы показать конец в календаре.
+  duration Int      @default(60)
+
+  // СНИМОК цены на момент создания занятия, в копейках.
+  // Если брать цену из Student, то поднятие цены с 1500 до 2000
+  // задним числом перепишет все прошлые месяцы и сломает отчётность.
+  price Int
+
+  status LessonStatus @default(PLANNED)
+  // Дата оплаты вместо булева флага: та же цена хранения,
+  // но появляется ответ на вопрос «сколько пришло денег за март».
+  paidAt DateTime?
+  note   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  reminders Reminder[]
+
+  // Расписание кабинета за период.
+  @@index([tutorId, startsAt])
+  // Рабочий индекс планировщика: «какие занятия скоро начнутся».
+  @@index([startsAt, status])
+  // Долги ученика: прошедшие занятия без оплаты.
+  @@index([studentId, status, paidAt])
+  @@map("lessons")
+}
+
+// ─── Напоминания ─────────────────────────────────────────────────────────
+
+// Журнал напоминаний. Существует ради одной строчки — @@unique ниже.
+//
+// Планировщик перезапускается, тикает дважды, падает после отправки
+// но до записи результата. Без уникального ключа ученик получает
+// «завтра в 16:00 занятие» три раза подряд. С ним — ровно один раз.
+model Reminder {
+  id       String @id @default(uuid())
+  lessonId String
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  kind ReminderKind
+  // Когда напоминание должно уйти.
+  scheduledAt DateTime
+  // Когда фактически ушло; null — ещё в очереди.
+  sentAt DateTime?
+  // Текст ошибки Telegram: ученик заблокировал бота и т. п.
+  error      String?
+  attempts   Int      @default(0)
+  createdAt  DateTime @default(now())
+
+  // Главная защита от дублей.
+  @@unique([lessonId, kind])
+  // Выборка планировщика: «что пора отправить».
+  @@index([sentAt, scheduledAt])
+  @@map("reminders")
+}
+
+// ─── Приглашения ─────────────────────────────────────────────────────────
+
+// Код для deep link t.me/<bot>?start=<code>.
+//
+// Одноразовый и с TTL: утёкшая ссылка иначе навсегда даёт
+// постороннему человеку привязаться к чужой карточке ученика.
+model Invite {
+  id        String  @id @default(uuid())
+  code      String  @unique
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  @@index([studentId])
+  @@map("invites")
+}
+
+// ─── Перечисления ────────────────────────────────────────────────────────
+
+enum StudentSource {
+  MANUAL
+  TELEGRAM
+}
+
+enum InviteStatus {
+  NONE
+  INVITED
+  ACCEPTED
+}
+
+enum LessonStatus {
+  PLANNED
+  DONE
+  CANCELLED
+}
+
+enum ReminderKind {
+  BEFORE_HOURS
+  BEFORE_MINUTES
+  DEBT
+}
