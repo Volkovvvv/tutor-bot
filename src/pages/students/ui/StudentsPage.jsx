@@ -8,7 +8,7 @@ export default function StudentsPage({ students, lessons, onOpen, onAdd, onInvit
       <StudentList students={students} lessons={lessons} onOpen={onOpen} />
 
       <div className="actions">
-        <button className="btn" onClick={onInvite}>Пригласить ученика</button>
+        <button className="btn btn-accent" onClick={onInvite}>Пригласить ученика</button>
         <button className="btn btn-secondary" onClick={onAdd}>+ Добавить вручную</button>
       </div>
     </>

@@ -11,7 +11,7 @@ export default function LessonsPage({ students, lessons, onOpen, onAdd }) {
       <LessonList lessons={lessons} students={students} onOpen={onOpen} />
 
       <div className="actions">
-        <button className="btn" onClick={onAdd}>+ Добавить занятие</button>
+        <button className="btn btn-accent" onClick={onAdd}>+ Добавить занятие</button>
       </div>
     </>
   )

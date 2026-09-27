@@ -8,7 +8,14 @@ export default function LessonList({ lessons, students, onOpen }) {
   const studentById = indexById(students)
 
   if (sorted.length === 0) {
-    return <div className="empty">Занятий пока нет.</div>
+    return (
+      <div className="empty">
+        <div className="empty-art">📅</div>
+        <div className="empty-title">Расписание пока пустое</div>
+        Добавьте занятие — ученик получит напоминание,
+        а доход попадёт в итоги месяца.
+      </div>
+    )
   }
 
   return sorted.map((l) => (

@@ -257,16 +257,18 @@ h1 { font-size: 20px; margin: 0 0 16px; }
 .pick-price:focus { outline: 2px solid var(--link); }
 
 .avatar {
-  width: 38px;
-  height: 38px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   flex: 0 0 auto;
   display: grid;
   place-items: center;
+  /* Градиент задаётся инлайном в Avatar.jsx — свой для каждого имени */
   background: var(--button);
-  color: var(--button-text);
-  font-weight: 500;
+  color: #fff;
+  font-weight: 600;
   font-size: 15px;
+  letter-spacing: .3px;
 }
 
 .note {
@@ -422,3 +424,160 @@ h1 { font-size: 20px; margin: 0 0 16px; }
 }
 
 .tg-badge.notify-on { color: var(--success); }
+
+/* ─────────────────────────────────────────────────────────────
+   Акцентный слой: градиенты и крупная типографика.
+
+   Свои цвета, не из themeParams: Telegram отдаёт только базовую
+   палитру интерфейса, а фирменный градиент должен выглядеть
+   одинаково в светлой и тёмной теме.
+   ───────────────────────────────────────────────────────────── */
+
+:root {
+  --grad-from: #6d5efc;
+  --grad-to: #46b1ff;
+  --grad-warm-from: #ff8a3d;
+  --grad-warm-to: #ff5f8f;
+  --on-grad: #ffffff;
+  --shadow-soft: 0 6px 20px rgba(80, 70, 200, .18);
+  --radius-lg: 18px;
+}
+
+/* Главный блок доходов */
+
+.hero {
+  background: linear-gradient(135deg, var(--grad-from), var(--grad-to));
+  border-radius: var(--radius-lg);
+  padding: 20px;
+  margin-bottom: 18px;
+  color: var(--on-grad);
+  box-shadow: var(--shadow-soft);
+  position: relative;
+  overflow: hidden;
+}
+
+/* Мягкий блик — объём без картинок */
+.hero::after {
+  content: '';
+  position: absolute;
+  top: -60%;
+  right: -20%;
+  width: 70%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(255,255,255,.22), transparent 70%);
+  pointer-events: none;
+}
+
+.hero-label {
+  font-size: 13px;
+  opacity: .85;
+  margin-bottom: 6px;
+  text-transform: lowercase;
+}
+
+.hero-amount {
+  font-size: 34px;
+  font-weight: 700;
+  line-height: 1.1;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.5px;
+}
+
+.hero-stats {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+  position: relative;
+}
+
+.hero-stat {
+  flex: 1;
+  background: rgba(255, 255, 255, .16);
+  border-radius: 12px;
+  padding: 10px 12px;
+  backdrop-filter: blur(4px);
+}
+
+.hero-stat-value {
+  font-size: 18px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.hero-stat-label {
+  font-size: 12px;
+  opacity: .85;
+  margin-top: 2px;
+}
+
+/* Карточки: чуть объёмнее, с отзывчивым нажатием */
+
+.card {
+  border-radius: 14px;
+  padding: 14px;
+  transition: transform .12s ease, box-shadow .12s ease;
+}
+
+.card:active {
+  opacity: 1;
+  transform: scale(.985);
+}
+
+.card-right { font-weight: 600; font-variant-numeric: tabular-nums; }
+
+/* Кнопки */
+
+.btn {
+  border-radius: 14px;
+  font-weight: 600;
+  transition: transform .12s ease, opacity .12s ease;
+}
+
+.btn:active:not(:disabled) { transform: scale(.985); }
+
+/* Главная кнопка действия — градиентом, чтобы вести взгляд */
+.btn-accent {
+  background: linear-gradient(135deg, var(--grad-from), var(--grad-to));
+  color: var(--on-grad);
+  box-shadow: var(--shadow-soft);
+}
+
+/* Пустое состояние — приглашает к действию, а не просто сообщает */
+
+.empty-art {
+  font-size: 44px;
+  line-height: 1;
+  margin-bottom: 12px;
+}
+
+.empty-title {
+  color: var(--text);
+  font-size: 17px;
+  font-weight: 600;
+  margin-bottom: 6px;
+}
+
+/* Заголовки секций и экранов */
+
+h1 { font-size: 24px; font-weight: 700; letter-spacing: -.4px; }
+
+.section-title { letter-spacing: .02em; text-transform: uppercase; font-size: 12px; }
+
+/* Бейджи статусов — заливкой, читается быстрее цветного текста */
+
+.badge {
+  font-weight: 600;
+  padding: 3px 9px;
+}
+
+.badge.paid { background: rgba(30, 158, 82, .14); color: var(--success); }
+.badge.unpaid { background: rgba(229, 57, 53, .12); color: var(--danger); }
+.badge.done { background: rgba(30, 158, 82, .14); color: var(--success); }
+.badge.cancelled { background: rgba(125, 139, 153, .16); }
+
+/* В тёмной теме цветная тень выглядит грязью — убираем почти полностью */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --shadow-soft: 0 6px 18px rgba(0, 0, 0, .35);
+  }
+}

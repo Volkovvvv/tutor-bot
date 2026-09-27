@@ -8,7 +8,14 @@ export default function StudentList({ students, lessons, onOpen }) {
   }
 
   if (students.length === 0) {
-    return <div className="empty">Пока никого нет.<br />Добавьте первого ученика.</div>
+    return (
+      <div className="empty">
+        <div className="empty-art">🎓</div>
+        <div className="empty-title">Здесь появятся ваши ученики</div>
+        Пригласите первого — и напоминания о занятиях
+        начнут приходить ему автоматически.
+      </div>
+    )
   }
 
   return students.map((s) => (
