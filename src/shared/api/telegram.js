@@ -13,6 +13,32 @@ export const isTelegram = Boolean(
 
 export const tg = isTelegram ? webApp : null
 
+/**
+ * Подписанная строка initData для входа на бэкенде.
+ *
+ * Читается в момент вызова, а не при импорте модуля: на части клиентов
+ * (в первую очередь Telegram Desktop) WebApp заполняется не мгновенно,
+ * и значение, снятое на этапе импорта, оказывается пустым.
+ *
+ * Запасной путь — window.location.hash: Telegram кладёт туда
+ * tgWebAppData с той же подписью, и оттуда её можно взять, даже если
+ * SDK ещё не успел разобрать параметры.
+ */
+export function getInitData() {
+  const fromSdk = window.Telegram?.WebApp?.initData
+  if (fromSdk) return fromSdk
+
+  try {
+    const hash = window.location.hash.slice(1)
+    const fromHash = new URLSearchParams(hash).get('tgWebAppData')
+    if (fromHash) return fromHash
+  } catch {
+    // формат hash неожиданный — считаем, что данных нет
+  }
+
+  return null
+}
+
 export function initTelegram() {
   if (!tg) return
   tg.ready()

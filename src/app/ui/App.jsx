@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { applyTheme, initTelegram, tg } from '../../shared/api/telegram.js'
+import { applyTheme, tg } from '../../shared/api/telegram.js'
 import Toast from '../../shared/ui/Toast.jsx'
 import { indexById } from '../../entities/student/index.js'
 import { StudentsPage } from '../../pages/students/index.js'
@@ -17,8 +17,9 @@ export default function App() {
   const [view, setView] = useState({ name: 'students' })
   const [toast, setToast] = useState('')
 
+  // initTelegram() вызывается в main.jsx до первого рендера — здесь
+  // остаётся только тема, которая может меняться в процессе работы.
   useEffect(() => {
-    initTelegram()
     applyTheme()
     tg?.onEvent?.('themeChanged', applyTheme)
     return () => tg?.offEvent?.('themeChanged', applyTheme)

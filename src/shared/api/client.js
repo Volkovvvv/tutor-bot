@@ -1,6 +1,6 @@
 // Тонкий HTTP-клиент к бэкенду. Держит JWT в памяти и в localStorage,
 // подставляет заголовок Authorization, разбирает ошибки в единый формат.
-import { tg } from './telegram.js'
+import { getInitData } from './telegram.js'
 
 const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3000/api'
 const TOKEN_KEY = 'tutor-crm:token'
@@ -70,7 +70,7 @@ export const api = {
 // Вход по initData. Telegram отдаёт initData как готовую подписанную
 // строку — бэкенд проверяет её HMAC-подписью токена бота.
 export async function login() {
-  const initData = tg?.initData
+  const initData = getInitData()
   if (!initData) {
     throw new ApiError(0, 'Приложение открыто не из Telegram — вход невозможен')
   }
@@ -80,7 +80,10 @@ export async function login() {
     body: JSON.stringify({ initData }),
   })
   if (!res.ok) {
-    throw new ApiError(res.status, 'Не удалось войти')
+    // Сервер намеренно не раскрывает, что именно не сошлось в подписи
+    // (это помогало бы её подбирать), но код ответа стоит показать —
+    // иначе при разборе проблемы видно только «не удалось войти».
+    throw new ApiError(res.status, `Сервер отклонил вход (код ${res.status})`)
   }
   const data = await res.json()
   setToken(data.accessToken)
