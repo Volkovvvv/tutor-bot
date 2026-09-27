@@ -54,23 +54,10 @@ export default function App() {
   const hideToast = useCallback(() => setToast(''), [])
 
   const studentById = useMemo(() => indexById(store.students), [store.students])
-  const existingTgIds = useMemo(
-    () => new Set(store.students.map((s) => s.tgId).filter(Boolean)),
-    [store.students]
-  )
 
   const handleAddStudent = useCallback(
     (input) => {
       store.addStudent(input)
-      setView({ name: 'students' })
-    },
-    [store]
-  )
-
-  const handleImport = useCallback(
-    (list) => {
-      store.importStudents(list)
-      setToast(`Добавлено: ${list.length}`)
       setView({ name: 'students' })
     },
     [store]
@@ -151,7 +138,7 @@ export default function App() {
           lessons={store.lessons}
           onOpen={(id) => setView({ name: 'student', id })}
           onAdd={() => setView({ name: 'addStudent' })}
-          onImport={() => setView({ name: 'importStudents' })}
+          onInvite={() => setView({ name: 'importStudents' })}
         />
       ) : null}
 
@@ -196,8 +183,7 @@ export default function App() {
 
       {view.name === 'importStudents' ? (
         <ImportFromTelegram
-          existingTgIds={existingTgIds}
-          onImport={handleImport}
+          onCreate={store.createAndInvite}
           onCancel={() => setView({ name: 'students' })}
         />
       ) : null}

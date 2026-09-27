@@ -87,14 +87,34 @@ export function useStore() {
     haptic()
   }, [])
 
-  // Импорт из Telegram пока не подключён к серверу (см. README бэкенда —
-  // список чатов ещё демонстрационный), поэтому создаём учеников по одному
-  // тем же путём, что и обычное добавление.
-  const importStudents = useCallback((list) => {
-    Promise.all(list.map((input) => api.post('/students', studentToApi(input))))
-      .then((created) => setStudents((s) => [...s, ...created.map(studentFromApi)]))
-      .catch((e) => reportError(e.message))
+  // «Пригласить ученика»: создать карточку и сразу приглашение одним
+  // действием. Telegram не даёт мини-аппу список чатов пользователя
+  // (ограничение приватности платформы — нет такого метода ни в WebApp
+  // SDK, ни в Bot API), поэтому выбор чата идёт через нативный пикер
+  // switchInlineQuery уже с готовым текстом, а не через список контактов
+  // в самом приложении.
+  //
+  // Возвращает { message } — компонент передаёт его в shareText(),
+  // который и открывает системный пикер.
+  const createAndInvite = useCallback((input) => {
     haptic()
+    return api
+      .post('/students', studentToApi(input))
+      .then((created) => {
+        const student = studentFromApi(created)
+        setStudents((list) => [...list, student])
+        return api.post(`/students/${student.id}/invite`).then(({ message, link }) => {
+          setStudents((list) =>
+            list.map((s) => (s.id === student.id ? { ...s, inviteStatus: 'invited' } : s))
+          )
+          setInviteLinks((m) => new Map(m).set(student.id, link))
+          return { message }
+        })
+      })
+      .catch((e) => {
+        reportError(e.message)
+        return null
+      })
   }, [])
 
   const addLesson = useCallback((input) => {
@@ -203,7 +223,7 @@ export function useStore() {
     lessons,
     inviteLinks,
     addStudent,
-    importStudents,
+    createAndInvite,
     inviteStudent,
     updateNotify,
     addLesson,

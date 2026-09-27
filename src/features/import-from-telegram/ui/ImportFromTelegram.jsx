@@ -1,126 +1,74 @@
-import { useCallback, useEffect, useMemo, useState } from 'react'
+import { useCallback, useState } from 'react'
 import MainButton from '../../../shared/ui/MainButton.jsx'
-import Avatar from '../../../shared/ui/Avatar.jsx'
-import { fetchChats, IS_DEMO } from '../model/chats.js'
+import { shareText } from '../../../shared/api/telegram.js'
 
-const DEFAULT_PRICE = '1500'
+/**
+ * «Пригласить ученика»: создаёт карточку и сразу приглашение, затем
+ * открывает нативный пикер чатов Telegram с готовым текстом.
+ *
+ * Telegram не даёт мини-аппу список чатов пользователя — такого метода
+ * нет ни в WebApp SDK, ни в Bot API, это ограничение приватности
+ * платформы. Поэтому выбор получателя идёт через switchInlineQuery
+ * (тот же системный пикер, что и в carточке ученика), а не через список
+ * контактов внутри приложения.
+ */
+export default function ImportFromTelegram({ onCreate, onCancel }) {
+  const [name, setName] = useState('')
+  const [price, setPrice] = useState('')
+  const [sending, setSending] = useState(false)
 
-export default function ImportFromTelegram({ existingTgIds, onImport, onCancel }) {
-  const [chats, setChats] = useState([])
-  const [loading, setLoading] = useState(true)
-  // tgId -> цена строкой (пустая строка = поле ещё не заполнено)
-  const [picked, setPicked] = useState(() => new Map())
+  const valid = name.trim().length > 0 && Number(price) > 0
 
-  useEffect(() => {
-    let alive = true
-    fetchChats()
-      .then((list) => {
-        if (!alive) return
-        setChats(list)
-        setLoading(false)
-      })
-      .catch(() => alive && setLoading(false))
-    return () => {
-      alive = false
-    }
-  }, [])
+  const send = useCallback(async () => {
+    if (!(name.trim().length > 0 && Number(price) > 0) || sending) return
+    setSending(true)
+    const result = await onCreate({ name: name.trim(), price: Number(price) })
+    setSending(false)
+    if (!result) return // ошибка уже показана через reportError в useStore
 
-  // Уже добавленных не предлагаем повторно
-  const available = useMemo(
-    () => chats.filter((c) => !existingTgIds.has(c.tgId)),
-    [chats, existingTgIds]
-  )
-
-  const toggle = useCallback((tgId) => {
-    setPicked((prev) => {
-      const next = new Map(prev)
-      if (next.has(tgId)) next.delete(tgId)
-      else next.set(tgId, DEFAULT_PRICE)
-      return next
-    })
-  }, [])
-
-  const setPrice = useCallback((tgId, value) => {
-    setPicked((prev) => {
-      if (!prev.has(tgId)) return prev
-      const next = new Map(prev)
-      next.set(tgId, value)
-      return next
-    })
-  }, [])
-
-  // Сохранять можно, только если у каждого выбранного указана цена > 0
-  const valid = picked.size > 0 && [...picked.values()].every((p) => Number(p) > 0)
-
-  const save = useCallback(() => {
-    const byId = new Map(available.map((c) => [c.tgId, c]))
-    const students = []
-    for (const [tgId, price] of picked) {
-      const chat = byId.get(tgId)
-      if (!chat || !(Number(price) > 0)) continue
-      students.push({
-        name: chat.name,
-        price: Number(price),
-        tgId: chat.tgId,
-        username: chat.username,
-        source: 'telegram',
-      })
-    }
-    if (students.length > 0) onImport(students)
-  }, [picked, available, onImport])
+    const shared = shareText(result.message)
+    // shareText сам открывает пикер (shared) или копирует текст в буфер
+    // (copied) — дальше решать репетитору, куда его вставить.
+    onCancel()
+    return shared
+  }, [name, price, sending, onCreate, onCancel])
 
   return (
     <>
       <button className="back" onClick={onCancel}>← Назад</button>
-      <h1>Выбрать из Telegram</h1>
+      <h1>Пригласить ученика</h1>
 
-      {IS_DEMO ? (
-        <div className="note">
-          Telegram не открывает Mini App доступ к списку чатов — это ограничение
-          приватности. Сейчас показан демонстрационный список. На втором этапе
-          ученики появятся здесь после того, как напишут боту.
-        </div>
-      ) : null}
+      <div className="note">
+        Telegram не даёт приложению доступ к списку ваших чатов — это
+        ограничение приватности платформы. Укажите имя и цену, а получателя
+        выберете на следующем шаге в системном окне выбора чата.
+      </div>
 
-      {loading ? (
-        <div className="empty">Загружаем…</div>
-      ) : available.length === 0 ? (
-        <div className="empty">Все доступные контакты уже добавлены.</div>
-      ) : (
-        available.map((c) => {
-          const on = picked.has(c.tgId)
-          return (
-            <div key={c.tgId} className={`pick-row ${on ? 'on' : 'off'}`}>
-              <button
-                className="pick-check"
-                onClick={() => toggle(c.tgId)}
-                aria-label={on ? 'Убрать' : 'Выбрать'}
-              >
-                ✓
-              </button>
-              <Avatar name={c.name} />
-              <div className="pick-main" onClick={() => toggle(c.tgId)}>
-                <div className="pick-name">{c.name}</div>
-                <div className="pick-username">{c.username ? `@${c.username}` : 'без username'}</div>
-              </div>
-              <input
-                className="pick-price"
-                type="number"
-                inputMode="numeric"
-                placeholder="₽"
-                disabled={!on}
-                value={on ? picked.get(c.tgId) : ''}
-                onChange={(e) => setPrice(c.tgId, e.target.value)}
-              />
-            </div>
-          )
-        })
-      )}
+      <div className="field">
+        <label>Имя</label>
+        <input
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+          placeholder="Например, Аня Петрова"
+          autoFocus
+        />
+      </div>
+
+      <div className="field">
+        <label>Цена за занятие, ₽</label>
+        <input
+          type="number"
+          inputMode="numeric"
+          value={price}
+          onChange={(e) => setPrice(e.target.value)}
+          placeholder="1500"
+        />
+      </div>
 
       <MainButton
-        text={picked.size > 0 ? `Добавить (${picked.size})` : 'Добавить'}
-        onClick={save}
-        disabled={!valid}
+        text={sending ? 'Отправляем…' : 'Выбрать чат и отправить'}
+        onClick={send}
+        disabled={!valid || sending}
       />
     </>
   )
