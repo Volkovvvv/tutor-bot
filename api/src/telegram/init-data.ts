@@ -103,11 +103,15 @@ export function verifyInitData(
     throw new InitDataError('Некорректный формат hash')
   }
 
-  // data_check_string: все поля кроме hash, отсортированные по имени.
-  // signature — поле новой Ed25519-схемы Telegram, в HMAC не участвует.
+  // data_check_string: все поля кроме hash, отсортированные по имени,
+  // со значениями в ДЕКОДИРОВАННОМ виде (URLSearchParams делает это сам).
+  //
+  // Поле signature (Ed25519-схема Telegram) в подсчёт ВХОДИТ — проверено
+  // на настоящем initData из Telegram Desktop 9.6. Исключать его нельзя:
+  // без него подпись не сходится на клиентах, которые его присылают.
   const pairs: string[] = []
   for (const [key, value] of params.entries()) {
-    if (key === 'hash' || key === 'signature') continue
+    if (key === 'hash') continue
     pairs.push(`${key}=${value}`)
   }
   pairs.sort()

@@ -3,7 +3,10 @@ import { InitDataError, verifyInitData } from './init-data'
 
 const BOT_TOKEN = '123456:TEST_TOKEN_FOR_UNIT_TESTS_ONLY_abcdef'
 
-/** Собирает корректно подписанный initData — как это делает Telegram. */
+/**
+ * Собирает корректно подписанный initData — как это делает Telegram:
+ * подпись по декодированным значениям, в строку уходят закодированные.
+ */
 function signInitData(
   fields: Record<string, string>,
   token = BOT_TOKEN,
@@ -130,16 +133,66 @@ describe('verifyInitData', () => {
     expect(() => verifyInitData(raw, BOT_TOKEN)).toThrow(/JSON/i)
   })
 
-  it('игнорирует поле signature при подсчёте HMAC', () => {
-    // Telegram добавляет signature для Ed25519-схемы; в HMAC оно не входит.
-    const raw = signInitData({ user: validUser, auth_date: String(nowSeconds()) })
-    const withSignature = `${raw}&signature=abc_def-123`
-    expect(() => verifyInitData(withSignature, BOT_TOKEN)).not.toThrow()
+  it('учитывает поле signature при подсчёте HMAC', () => {
+    // Telegram добавляет signature (Ed25519-схема) и ВКЛЮЧАЕТ его
+    // в data_check_string. Раньше код его исключал, из-за чего не
+    // принимал ни один initData с клиентов, которые signature присылают.
+    const raw = signInitData({
+      user: validUser,
+      auth_date: String(nowSeconds()),
+      signature: 'abc_def-123',
+    })
+    expect(() => verifyInitData(raw, BOT_TOKEN)).not.toThrow()
+  })
+
+  it('отклоняет подмену signature', () => {
+    const raw = signInitData({
+      user: validUser,
+      auth_date: String(nowSeconds()),
+      signature: 'abc_def-123',
+    })
+    const tampered = raw.replace('abc_def-123', 'xyz_подделка')
+    expect(() => verifyInitData(tampered, BOT_TOKEN)).toThrow(InitDataError)
   })
 
   it('не теряет данные при спецсимволах в имени', () => {
     const tricky = JSON.stringify({ id: 42, first_name: 'A&B=C\nD', username: 'u' })
     const raw = signInitData({ user: tricky, auth_date: String(nowSeconds()) })
     expect(verifyInitData(raw, BOT_TOKEN).user.firstName).toBe('A&B=C\nD')
+  })
+})
+
+/**
+ * Регрессия на настоящем initData из Telegram Desktop 9.6.
+ *
+ * Синтетические тесты выше подписывают данные тем же кодом, что и
+ * проверяют, поэтому не ловили расхождение с реальным форматом Telegram:
+ * версия, исключавшая signature из data_check_string, все их проходила,
+ * но не принимала ни одного живого входа.
+ *
+ * hash здесь настоящий, выданный Telegram. Токен бота в репозиторий не
+ * попадает, поэтому тест запускается только когда BOT_TOKEN есть
+ * в окружении — на CI без секрета он пропускается.
+ */
+describe('реальный initData от Telegram', () => {
+  const REAL_INIT_DATA =
+    'user=%7B%22id%22%3A652903909%2C%22first_name%22%3A%22%D0%92%D0%BB%D0%B0%D0%B4%22%2C%22last_name%22%3A%22%22%2C%22username%22%3A%22vladvolkovv_v%22%2C%22language_code%22%3A%22ru%22%2C%22allows_write_to_pm%22%3Atrue%2C%22photo_url%22%3A%22https%3A%5C%2F%5C%2Ft.me%5C%2Fi%5C%2Fuserpic%5C%2F320%5C%2FHOKVHpQLbHKckSDiX4gTh-r_0pQzile5DxLencI-ca8.svg%22%7D' +
+    '&chat_instance=4494256479376807595' +
+    '&chat_type=private' +
+    '&auth_date=1790537430' +
+    '&signature=Xlwv3qg4xrG-UF-cTywzD4-G_HUqvD9RuHdGbUvx5pthJZhe1F4takFr3ivPTu7luavFL_Bs2hdoxed_TNb7Ag' +
+    '&hash=2791992f24cd26421a7a1efa1ec232d5dc3470bb97b3d7768cef4a618cff5418'
+
+  const realToken = process.env.BOT_TOKEN
+  const maybe = realToken ? it : it.skip
+
+  maybe('принимает подпись, выданную самим Telegram', () => {
+    // Окно жизни огромное: auth_date в этих данных давно просрочен,
+    // проверяем именно сходимость подписи.
+    const result = verifyInitData(REAL_INIT_DATA, realToken!, 10_000_000_000)
+
+    expect(result.user.id).toBe(652903909)
+    expect(result.user.firstName).toBe('Влад')
+    expect(result.user.username).toBe('vladvolkovv_v')
   })
 })
