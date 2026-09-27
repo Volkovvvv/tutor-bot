@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Диагностика Telegram</title>
+<script src="https://telegram.org/js/telegram-web-app.js"></script>
+<style>
+  body { font-family: -apple-system, sans-serif; padding: 16px; font-size: 14px; }
+  .row { margin-bottom: 12px; padding: 8px; background: #f2f2f2; border-radius: 8px; }
+  .k { font-weight: 600; margin-bottom: 4px; }
+  .v { word-break: break-all; font-family: monospace; font-size: 12px; }
+  .ok { color: #0a0; } .bad { color: #c00; }
+</style>
+</head>
+<body>
+<h2>Что Telegram передал в мини-апп</h2>
+<div id="out">загрузка…</div>
+<script>
+  const W = window.Telegram && window.Telegram.WebApp
+  if (W && W.ready) W.ready()
+
+  function row(k, v, good) {
+    const cls = good === undefined ? '' : (good ? 'ok' : 'bad')
+    return '<div class="row"><div class="k">' + k + '</div><div class="v ' + cls + '">' + v + '</div></div>'
+  }
+
+  let html = ''
+  html += row('window.Telegram существует', W ? 'да' : 'НЕТ', !!W)
+  if (W) {
+    const id = W.initData
+    html += row('initData (длина)', id ? id.length + ' символов' : 'ПУСТО', !!id)
+    html += row('initData (значение)', id ? id.slice(0, 200) + (id.length > 200 ? '…' : '') : '—')
+    html += row('platform', W.platform || '—', W.platform && W.platform !== 'unknown')
+    html += row('version', W.version || '—')
+    html += row('initDataUnsafe.user', W.initDataUnsafe && W.initDataUnsafe.user
+      ? JSON.stringify(W.initDataUnsafe.user) : 'НЕТ', !!(W.initDataUnsafe && W.initDataUnsafe.user))
+  }
+  html += row('location.hash', window.location.hash || 'пусто')
+  html += row('location.search', window.location.search || 'пусто')
+  try {
+    const h = new URLSearchParams(window.location.hash.slice(1)).get('tgWebAppData')
+    html += row('tgWebAppData из hash', h ? h.slice(0, 200) : 'НЕТ', !!h)
+  } catch (e) { html += row('tgWebAppData из hash', 'ошибка: ' + e.message) }
+  html += row('userAgent', navigator.userAgent)
+
+  document.getElementById('out').innerHTML = html
+</script>
+</body>
+</html>
