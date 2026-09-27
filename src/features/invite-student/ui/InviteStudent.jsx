@@ -1,5 +1,4 @@
 import { INVITE_LABELS, INVITE_STATUS } from '../../../entities/student/index.js'
-import { BOT_CONFIGURED } from '../../../shared/config/bot.js'
 import { copyText, openChat, shareText } from '../../../shared/api/telegram.js'
 
 // Приглашение ученика к боту. Бот сможет писать ему только после того,
@@ -63,9 +62,8 @@ export default function InviteStudent({ student, onInvite, onNotify, inviteLink 
           {inviteLink ? <div className="invite-link">{inviteLink}</div> : null}
 
           <div className="note">
-            {BOT_CONFIGURED
-              ? 'Ученик должен открыть ссылку и нажать «Начать» — только после этого бот сможет ему писать.'
-              : 'Бот ещё не подключён: в ссылке стоит заглушка. Укажите VITE_BOT_USERNAME при сборке, когда бот будет создан.'}
+            Ученик должен открыть ссылку и нажать «Начать» — только после
+            этого бот сможет ему писать.
           </div>
         </>
       )}
