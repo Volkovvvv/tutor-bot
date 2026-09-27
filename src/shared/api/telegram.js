@@ -47,23 +47,30 @@ export function initTelegram() {
 
 // Значения themeParams приходят как #rrggbb. Подставляем их в CSS-переменные,
 // а дефолты в shared/ui/index.css срабатывают, когда Telegram недоступен.
+/**
+ * Подгоняет оформление Telegram под палитру приложения.
+ *
+ * Цвета интерфейса намеренно НЕ берутся из themeParams: у приложения своя
+ * фирменная палитра, одинаковая у всех пользователей. Иначе тема каждого
+ * пользователя перекрашивала бы приложение, и узнаваемого вида не было бы.
+ *
+ * Telegram сообщаем свои цвета в обратную сторону — чтобы шапка и фон
+ * за пределами webview совпадали с приложением, а не контрастировали с ним.
+ */
 export function applyTheme() {
   if (!tg) return
-  const p = tg.themeParams || {}
-  const map = {
-    '--bg': p.bg_color,
-    '--text': p.text_color,
-    '--hint': p.hint_color,
-    '--link': p.link_color,
-    '--button': p.button_color,
-    '--button-text': p.button_text_color,
-    '--card': p.secondary_bg_color,
+
+  const styles = getComputedStyle(document.documentElement)
+  const bg = styles.getPropertyValue('--bg').trim()
+  const header = styles.getPropertyValue('--brand-dark').trim()
+
+  try {
+    if (bg) tg.setBackgroundColor?.(bg)
+    if (header) tg.setHeaderColor?.(header)
+  } catch {
+    // Старые версии клиента метод не поддерживают — оформление
+    // останется системным, на работу приложения это не влияет.
   }
-  const root = document.documentElement
-  for (const [name, value] of Object.entries(map)) {
-    if (value) root.style.setProperty(name, value)
-  }
-  if (p.bg_color) document.body.style.backgroundColor = p.bg_color
 }
 
 export function haptic(type = 'light') {
