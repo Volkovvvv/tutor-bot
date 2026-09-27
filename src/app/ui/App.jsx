@@ -24,6 +24,15 @@ export default function App() {
     return () => tg?.offEvent?.('themeChanged', applyTheme)
   }, [])
 
+  // Ошибки фоновых запросов (см. reportError в useStore) всплывают сюда же,
+  // тем же тостом, что и обычные уведомления — заводить отдельный UI
+  // под них не оправдано.
+  useEffect(() => {
+    const onApiError = (e) => setToast(e.detail)
+    window.addEventListener('api-error', onApiError)
+    return () => window.removeEventListener('api-error', onApiError)
+  }, [])
+
   // Аппаратная кнопка «назад» в Telegram — на всех экранах кроме корневых списков
   useEffect(() => {
     const bb = tg?.BackButton
@@ -93,6 +102,29 @@ export default function App() {
   const currentLesson =
     view.name === 'lesson' ? store.lessons.find((l) => l.id === view.id) : null
 
+  // Вход и первая загрузка данных с сервера идут перед любым экраном:
+  // без них store.students пуст не потому, что учеников нет,
+  // а потому что запрос ещё не пришёл.
+  if (store.authError) {
+    return (
+      <div className="app">
+        <div className="empty">
+          Не удалось подключиться: {store.authError}
+          <br />
+          Откройте приложение из Telegram и попробуйте ещё раз.
+        </div>
+      </div>
+    )
+  }
+
+  if (!store.ready) {
+    return (
+      <div className="app">
+        <div className="empty">Загрузка…</div>
+      </div>
+    )
+  }
+
   return (
     <div className="app">
       {LIST_VIEWS.includes(view.name) ? (
@@ -141,7 +173,7 @@ export default function App() {
           onDelete={handleDeleteStudent}
           onNotify={setToast}
           onInvite={store.inviteStudent}
-          onMarkAccepted={store.markAccepted}
+          inviteLink={store.inviteLinks.get(view.id)}
           onUpdateNotify={store.updateNotify}
         />
       ) : null}

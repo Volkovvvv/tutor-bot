@@ -14,7 +14,7 @@ export default function StudentPage({
   onDelete,
   onNotify,
   onInvite,
-  onMarkAccepted,
+  inviteLink,
   onUpdateNotify,
 }) {
   if (!student) return null
@@ -39,8 +39,8 @@ export default function StudentPage({
       <InviteStudent
         student={student}
         onInvite={onInvite}
-        onMarkAccepted={onMarkAccepted}
         onNotify={onNotify}
+        inviteLink={inviteLink}
       />
 
       <NotifySettings student={student} onChange={onUpdateNotify} />
