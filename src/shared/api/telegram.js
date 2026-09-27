@@ -98,9 +98,14 @@ export function openChat({ username, tgId }) {
 // Отправить текст в выбранный чат: открывает нативный пикер Telegram.
 // Вне Telegram (и на старых версиях) откатываемся на копирование в буфер.
 export function shareText(text) {
-  if (tg?.switchInlineQuery) {
+  // Через t.me/share/url — Telegram открывает нативный выбор чата.
+  //
+  // Не используем switchInlineQuery: он требует включённого inline-режима
+  // у бота (BotFather → /setinline), а без него Telegram молча игнорирует
+  // вызов — ни пикера, ни ошибки. share/url работает всегда.
+  if (tg?.openTelegramLink) {
     try {
-      tg.switchInlineQuery(text, ['users'])
+      tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(text)}`)
       return 'shared'
     } catch {
       // ниже отработает копирование

@@ -12,7 +12,7 @@ import { shareText } from '../../../shared/api/telegram.js'
  * (тот же системный пикер, что и в carточке ученика), а не через список
  * контактов внутри приложения.
  */
-export default function ImportFromTelegram({ onCreate, onCancel }) {
+export default function ImportFromTelegram({ onCreate, onCancel, onDone }) {
   const [name, setName] = useState('')
   const [price, setPrice] = useState('')
   const [sending, setSending] = useState(false)
@@ -27,11 +27,17 @@ export default function ImportFromTelegram({ onCreate, onCancel }) {
     if (!result) return // ошибка уже показана через reportError в useStore
 
     const shared = shareText(result.message)
-    // shareText сам открывает пикер (shared) или копирует текст в буфер
-    // (copied) — дальше решать репетитору, куда его вставить.
-    onCancel()
-    return shared
-  }, [name, price, sending, onCreate, onCancel])
+    // Ученик уже создан и приглашение выпущено — экран закрываем в любом
+    // случае, но о судьбе сообщения сообщаем честно: если выбор чата
+    // открыть не удалось, текст лежит в буфере и вставить его надо самому.
+    onDone(
+      shared === 'shared'
+        ? 'Выберите чат ученика'
+        : shared === 'copied'
+          ? 'Приглашение скопировано — вставьте его в чат ученика'
+          : 'Ученик создан. Ссылку можно отправить с его карточки'
+    )
+  }, [name, price, sending, onCreate, onDone])
 
   return (
     <>
@@ -39,9 +45,8 @@ export default function ImportFromTelegram({ onCreate, onCancel }) {
       <h1>Пригласить ученика</h1>
 
       <div className="note">
-        Telegram не даёт приложению доступ к списку ваших чатов — это
-        ограничение приватности платформы. Укажите имя и цену, а получателя
-        выберете на следующем шаге в системном окне выбора чата.
+        Укажите имя и цену — приложение создаст карточку ученика и подготовит
+        приглашение. Дальше Telegram предложит выбрать чат, куда его отправить.
       </div>
 
       <div className="field">

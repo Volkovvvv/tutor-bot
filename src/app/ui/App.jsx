@@ -185,6 +185,10 @@ export default function App() {
         <ImportFromTelegram
           onCreate={store.createAndInvite}
           onCancel={() => setView({ name: 'students' })}
+          onDone={(message) => {
+            setView({ name: 'students' })
+            setToast(message)
+          }}
         />
       ) : null}
 
