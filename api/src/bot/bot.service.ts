@@ -97,6 +97,11 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
    * рассылку остальным.
    */
   async sendMessage(tgId: bigint, text: string): Promise<SendResult> {
+    // Локально бот выключен: не пишем реальным людям из тестовой базы.
+    if (this.mode === 'off') {
+      this.logger.debug(`BOT_MODE=off, сообщение для ${tgId} не отправлено: ${text}`)
+      return { ok: false, error: 'BOT_MODE=off' }
+    }
     try {
       await this.bot.api.sendMessage(Number(tgId), text)
       return { ok: true }
@@ -120,7 +125,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
    */
   async onModuleInit(): Promise<void> {
     try {
-      if (this.mode === 'webhook') {
+      if (this.mode === 'off') {
+        this.logger.log('BOT_MODE=off — бот не подключён, напоминания не отправляются')
+      } else if (this.mode === 'webhook') {
         await this.startWebhook()
       } else {
         await this.startPolling()
@@ -155,7 +162,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy(): Promise<void> {
-    if (this.mode !== 'webhook') {
+    if (this.mode === 'polling') {
       await this.bot.stop()
     }
   }

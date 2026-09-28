@@ -4,6 +4,9 @@ import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, validateSync } from
 export enum BotMode {
   polling = 'polling',
   webhook = 'webhook',
+  /** Бот не подключается к Telegram — для локальной разработки интерфейса,
+   *  чтобы не отбирать обновления у продового бота с тем же токеном. */
+  off = 'off',
 }
 
 export enum NodeEnv {
@@ -54,7 +57,7 @@ class EnvVars {
   @IsOptional()
   NODE_ENV?: NodeEnv
 
-  @IsEnum(BotMode, { message: 'BOT_MODE: polling | webhook' })
+  @IsEnum(BotMode, { message: 'BOT_MODE: polling | webhook | off' })
   @IsOptional()
   BOT_MODE?: BotMode
 
