@@ -1,0 +1,18 @@
+.group { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.chip {
+  padding: 9px 15px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--card);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: var(--shadow-card);
+}
+
+.on { background: var(--accent); color: var(--accent-ink); }

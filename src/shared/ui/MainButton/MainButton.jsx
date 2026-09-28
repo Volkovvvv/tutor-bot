@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
-import { tg } from '../api/telegram.js'
+import { tg } from '../../api/telegram.js'
+import Button from '../Button/Button.jsx'
 
 // Управляет Telegram.MainButton. Когда Telegram недоступен, рендерит обычную кнопку,
 // иначе вне Telegram форму было бы нечем отправить.
@@ -14,6 +15,8 @@ export default function MainButton({ text, onClick, disabled = false }) {
     const mb = tg?.MainButton
     if (!mb) return
     const handler = () => onClickRef.current()
+    // Фирменный лайм вместо цвета кнопки из темы пользователя
+    mb.setParams?.({ color: '#d8ee7e', text_color: '#2b2b1a' })
     mb.onClick(handler)
     mb.show()
     return () => {
@@ -34,8 +37,8 @@ export default function MainButton({ text, onClick, disabled = false }) {
   if (tg?.MainButton) return null
 
   return (
-    <button className="btn" onClick={onClick} disabled={disabled} style={{ marginTop: 20 }}>
+    <Button onClick={onClick} disabled={disabled}>
       {text}
-    </button>
+    </Button>
   )
 }

@@ -1,0 +1,24 @@
+.switch {
+  display: flex;
+  flex: 0 0 auto;
+  width: 50px;
+  height: 30px;
+  padding: 3px;
+  border: none;
+  border-radius: 15px;
+  background: #d9d3f3;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.knob {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #fff;
+  box-shadow: 0 2px 6px rgba(60, 46, 110, 0.25);
+  transition: transform 0.15s, background 0.15s;
+}
+
+.on { background: var(--accent); }
+.on .knob { transform: translateX(20px); background: var(--ink); }

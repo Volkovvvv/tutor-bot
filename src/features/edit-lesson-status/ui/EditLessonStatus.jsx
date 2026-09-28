@@ -1,32 +1,34 @@
 import { STATUS_LABELS } from '../../../entities/lesson/index.js'
+import { Button, Section } from '../../../shared/ui/index.js'
 
 const STATUSES = ['planned', 'done', 'cancelled']
 
+// Текущий вариант — лаймовой кнопкой, остальные — белыми
 export default function EditLessonStatus({ lesson, onSetStatus, onTogglePaid }) {
   return (
     <>
-      <div className="section-title">Статус</div>
-      <div className="actions">
+      <Section title="Статус">
         {STATUSES.map((status) => (
-          <button
+          <Button
             key={status}
-            className={`btn ${lesson.status === status ? '' : 'btn-secondary'}`}
+            variant={lesson.status === status ? 'primary' : 'secondary'}
+            aria-pressed={lesson.status === status}
             onClick={() => onSetStatus(lesson.id, status)}
           >
             {STATUS_LABELS[status]}
-          </button>
+          </Button>
         ))}
-      </div>
+      </Section>
 
-      <div className="section-title">Оплата</div>
-      <div className="actions">
-        <button
-          className={`btn ${lesson.paid ? '' : 'btn-secondary'}`}
+      <Section title="Оплата">
+        <Button
+          variant={lesson.paid ? 'primary' : 'secondary'}
+          aria-pressed={lesson.paid}
           onClick={() => onTogglePaid(lesson.id)}
         >
           {lesson.paid ? 'Оплачено ✓' : 'Отметить оплаченным'}
-        </button>
-      </div>
+        </Button>
+      </Section>
     </>
   )
 }

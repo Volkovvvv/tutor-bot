@@ -1,26 +1,29 @@
-import Avatar from '../../../shared/ui/Avatar.jsx'
+import { Avatar, ListRow } from '../../../shared/ui/index.js'
+import { cx } from '../../../shared/lib/cx.js'
 import { canNotify } from '../model/student.js'
 import { formatMoney, pluralLessons } from '../../../shared/lib/format.js'
+import s from './StudentCard.module.css'
 
 export default function StudentCard({ student, lessonCount, onClick }) {
   return (
-    <button className="card" onClick={onClick}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, minWidth: 0 }}>
-        <Avatar name={student.name} />
-        <div style={{ minWidth: 0 }}>
-          <div className="card-title">{student.name}</div>
-          <div className="card-sub">{pluralLessons(lessonCount)}</div>
+    <ListRow
+      onClick={onClick}
+      leading={<Avatar name={student.name} />}
+      title={student.name}
+      subtitle={pluralLessons(lessonCount)}
+      meta={
+        <>
           {student.source === 'telegram' ? (
-            <div className="tg-badge">
+            <div className={s.tag}>
               {student.username ? `@${student.username}` : 'из Telegram'}
             </div>
           ) : null}
           {canNotify(student) ? (
-            <div className="tg-badge notify-on">🔔 напоминания включены</div>
+            <div className={cx(s.tag, s.notifyOn)}>🔔 напоминания включены</div>
           ) : null}
-        </div>
-      </div>
-      <div className="card-right">{formatMoney(student.price)}</div>
-    </button>
+        </>
+      }
+      trailing={formatMoney(student.price)}
+    />
   )
 }

@@ -1,5 +1,12 @@
 import { useCallback, useState } from 'react'
-import MainButton from '../../../shared/ui/MainButton.jsx'
+import {
+  BackButton,
+  Field,
+  Input,
+  MainButton,
+  PageTitle,
+  Screen,
+} from '../../../shared/ui/index.js'
 
 export default function AddStudentForm({ onSave, onCancel }) {
   const [name, setName] = useState('')
@@ -13,32 +20,30 @@ export default function AddStudentForm({ onSave, onCancel }) {
   }, [name, price, onSave])
 
   return (
-    <>
-      <button className="back" onClick={onCancel}>← Назад</button>
-      <h1>Новый ученик</h1>
+    <Screen>
+      <BackButton onClick={onCancel} />
+      <PageTitle>Новый ученик</PageTitle>
 
-      <div className="field">
-        <label>Имя</label>
-        <input
+      <Field label="Имя">
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Например, Аня Петрова"
           autoFocus
         />
-      </div>
+      </Field>
 
-      <div className="field">
-        <label>Цена за занятие, ₽</label>
-        <input
+      <Field label="Цена за занятие, ₽">
+        <Input
           type="number"
           inputMode="numeric"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="1500"
         />
-      </div>
+      </Field>
 
       <MainButton text="Сохранить" onClick={save} disabled={!valid} />
-    </>
+    </Screen>
   )
 }

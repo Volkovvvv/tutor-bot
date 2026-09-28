@@ -1,0 +1,35 @@
+/* Основная кнопка — лаймовая пилюля, как CTA «Записаться на занятие» */
+.button {
+  width: 100%;
+  min-height: 54px;
+  padding: 14px 20px;
+  border: none;
+  border-radius: var(--radius-pill);
+  font-family: var(--font-display);
+  font-size: 17px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: transform 0.12s ease, opacity 0.12s ease;
+}
+
+.button:disabled { opacity: 0.5; cursor: default; }
+.button:active:not(:disabled) { transform: scale(0.985); }
+
+.primary {
+  background: var(--accent);
+  color: var(--accent-ink);
+  box-shadow: var(--shadow-cta);
+}
+
+.secondary {
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-card);
+}
+
+.danger {
+  background: var(--glass);
+  color: var(--danger);
+}

@@ -1,4 +1,13 @@
 import { canNotify } from '../../../entities/student/index.js'
+import {
+  ChipGroup,
+  FieldGroup,
+  Input,
+  Note,
+  Row,
+  Section,
+  ToggleRow,
+} from '../../../shared/ui/index.js'
 
 const BEFORE_HOURS = [
   { value: 0, label: 'Выкл' },
@@ -23,96 +32,64 @@ export default function NotifySettings({ student, onChange }) {
   const set = (patch) => onChange(student.id, { ...notify, ...patch })
 
   return (
-    <>
-      <div className="section-title">Уведомления ученику</div>
-
-      <div className="switch-row">
-        <div>
-          <div>Присылать напоминания</div>
-          <div className="switch-sub">Отправляет бот в Telegram</div>
-        </div>
-        <button
-          className={`switch ${notify.enabled ? 'on' : ''}`}
-          onClick={() => set({ enabled: !notify.enabled })}
-          aria-label="Включить напоминания"
-          role="switch"
-          aria-checked={notify.enabled}
-        >
-          <span className="switch-knob" />
-        </button>
-      </div>
+    <Section title="Уведомления ученику">
+      <ToggleRow
+        title="Присылать напоминания"
+        hint="Отправляет бот в Telegram"
+        checked={notify.enabled}
+        onChange={(enabled) => set({ enabled })}
+      />
 
       {notify.enabled ? (
         <>
-          <div className="field">
-            <label>Напомнить заранее</label>
-            <div className="chips">
-              {BEFORE_HOURS.map((o) => (
-                <button
-                  key={o.value}
-                  className={`chip ${notify.beforeHours === o.value ? 'on' : ''}`}
-                  onClick={() => set({ beforeHours: o.value })}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <FieldGroup label="Напомнить заранее">
+            <ChipGroup
+              options={BEFORE_HOURS}
+              value={notify.beforeHours}
+              onChange={(beforeHours) => set({ beforeHours })}
+            />
+          </FieldGroup>
 
-          <div className="field">
-            <label>И ещё раз перед занятием</label>
-            <div className="chips">
-              {BEFORE_MINUTES.map((o) => (
-                <button
-                  key={o.value}
-                  className={`chip ${notify.beforeMinutes === o.value ? 'on' : ''}`}
-                  onClick={() => set({ beforeMinutes: o.value })}
-                >
-                  {o.label}
-                </button>
-              ))}
-            </div>
-          </div>
+          <FieldGroup label="И ещё раз перед занятием">
+            <ChipGroup
+              options={BEFORE_MINUTES}
+              value={notify.beforeMinutes}
+              onChange={(beforeMinutes) => set({ beforeMinutes })}
+            />
+          </FieldGroup>
 
-          <div className="switch-row">
-            <div>
-              <div>Напоминать об оплате</div>
-              <div className="switch-sub">Если есть прошедшие неоплаченные занятия</div>
-            </div>
-            <button
-              className={`switch ${notify.debtReminder ? 'on' : ''}`}
-              onClick={() => set({ debtReminder: !notify.debtReminder })}
-              role="switch"
-              aria-checked={notify.debtReminder}
-            >
-              <span className="switch-knob" />
-            </button>
-          </div>
+          <ToggleRow
+            title="Напоминать об оплате"
+            hint="Если есть прошедшие неоплаченные занятия"
+            checked={notify.debtReminder}
+            onChange={(debtReminder) => set({ debtReminder })}
+          />
 
-          <div className="field">
-            <label>Не беспокоить</label>
-            <div className="row-2">
-              <input
+          <FieldGroup label="Не беспокоить">
+            <Row>
+              <Input
                 type="time"
+                aria-label="С"
                 value={notify.quietFrom}
                 onChange={(e) => set({ quietFrom: e.target.value })}
               />
-              <input
+              <Input
                 type="time"
+                aria-label="До"
                 value={notify.quietTo}
                 onChange={(e) => set({ quietTo: e.target.value })}
               />
-            </div>
-          </div>
+            </Row>
+          </FieldGroup>
         </>
       ) : null}
 
       {!active && notify.enabled ? (
-        <div className="note">
+        <Note>
           Настройки сохранены, но напоминания начнут приходить только после того,
           как ученик подключится по приглашению.
-        </div>
+        </Note>
       ) : null}
-    </>
+    </Section>
   )
 }

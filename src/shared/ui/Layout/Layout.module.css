@@ -1,0 +1,53 @@
+.shell {
+  max-width: 560px;
+  margin: 0 auto;
+  padding: 22px 16px calc(var(--tabbar-space) + var(--safe-bottom)) 20px;
+  min-height: 100vh;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+/* Декор: полупрозрачные математические символы, не больше двух */
+.shell::before,
+.shell::after {
+  position: absolute;
+  font-family: var(--font-display);
+  font-weight: 500;
+  pointer-events: none;
+  z-index: -1;
+}
+
+.shell::before {
+  content: '÷';
+  right: 22px;
+  top: 72px;
+  font-size: 48px;
+  color: rgba(255, 255, 255, 0.28);
+  transform: rotate(-12deg);
+}
+
+.shell::after {
+  content: '=';
+  right: 62px;
+  top: 38px;
+  font-size: 34px;
+  color: rgba(216, 238, 126, 0.55);
+  transform: rotate(10deg);
+}
+
+.stack {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap, 10px);
+}
+
+.actions { margin-top: 6px; }
+
+.row {
+  display: flex;
+  gap: 10px;
+}
+
+.row > * { flex: 1; min-width: 0; }

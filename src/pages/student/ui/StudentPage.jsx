@@ -4,6 +4,18 @@ import { InviteStudent } from '../../../features/invite-student/index.js'
 import { NotifySettings } from '../../../features/notify-settings/index.js'
 import { formatDate } from '../../../shared/lib/date.js'
 import { formatMoney } from '../../../shared/lib/format.js'
+import {
+  Actions,
+  BackButton,
+  Button,
+  EmptyState,
+  InfoList,
+  InfoRow,
+  PageTitle,
+  Screen,
+  Section,
+  Stack,
+} from '../../../shared/ui/index.js'
 
 export default function StudentPage({
   student,
@@ -23,18 +35,16 @@ export default function StudentPage({
   const upcoming = upcomingLessons(lessons, student.id)
 
   return (
-    <>
-      <button className="back" onClick={onBack}>← Ученики</button>
-      <h1>{student.name}</h1>
+    <Screen>
+      <BackButton onClick={onBack}>Ученики</BackButton>
+      <PageTitle>{student.name}</PageTitle>
 
-      <div className="summary">
-        <div className="summary-row"><span>Цена за занятие</span><b>{formatMoney(student.price)}</b></div>
-        <div className="summary-row"><span>Проведено всего</span><b>{doneCount}</b></div>
-        <div className="summary-row"><span>Должен</span><b>{formatMoney(owed)}</b></div>
-        {student.username ? (
-          <div className="summary-row"><span>Telegram</span><b>@{student.username}</b></div>
-        ) : null}
-      </div>
+      <InfoList>
+        <InfoRow label="Цена за занятие">{formatMoney(student.price)}</InfoRow>
+        <InfoRow label="Проведено всего">{doneCount}</InfoRow>
+        <InfoRow label="Должен">{formatMoney(owed)}</InfoRow>
+        {student.username ? <InfoRow label="Telegram">@{student.username}</InfoRow> : null}
+      </InfoList>
 
       <InviteStudent
         student={student}
@@ -52,26 +62,28 @@ export default function StudentPage({
         onNotify={onNotify}
       />
 
-      <div className="section-title">История занятий</div>
+      <Section title="История занятий">
+        {own.length === 0 ? (
+          <EmptyState>Занятий пока нет.</EmptyState>
+        ) : (
+          <Stack>
+            {own.map((l) => (
+              <LessonRow
+                key={l.id}
+                lesson={l}
+                title={formatDate(l.date)}
+                subtitle={`в ${l.time}`}
+                onClick={() => onOpenLesson(l.id)}
+              />
+            ))}
+          </Stack>
+        )}
+      </Section>
 
-      {own.length === 0 ? (
-        <div className="empty">Занятий пока нет.</div>
-      ) : (
-        own.map((l) => (
-          <LessonRow
-            key={l.id}
-            lesson={l}
-            title={formatDate(l.date)}
-            subtitle={`в ${l.time}`}
-            onClick={() => onOpenLesson(l.id)}
-          />
-        ))
-      )}
-
-      <div className="actions">
-        <button className="btn" onClick={() => onAddLesson(student.id)}>+ Добавить занятие</button>
-        <button className="btn btn-danger" onClick={() => onDelete(student.id)}>Удалить ученика</button>
-      </div>
-    </>
+      <Actions>
+        <Button onClick={() => onAddLesson(student.id)}>+ Добавить занятие</Button>
+        <Button variant="danger" onClick={() => onDelete(student.id)}>Удалить ученика</Button>
+      </Actions>
+    </Screen>
   )
 }

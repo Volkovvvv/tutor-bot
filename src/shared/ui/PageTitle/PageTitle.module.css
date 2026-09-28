@@ -1,0 +1,10 @@
+.title {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 32px;
+  line-height: 1.08;
+  text-transform: uppercase;
+  color: var(--on-ground);
+  text-shadow: 0 2px 14px rgba(60, 46, 110, 0.22);
+}

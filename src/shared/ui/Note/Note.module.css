@@ -1,0 +1,11 @@
+/* Блок-совет: лаймовый контур + прозрачная лаймовая заливка */
+.note {
+  padding: 12px 14px;
+  border: 2px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--tip-bg);
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.45;
+}

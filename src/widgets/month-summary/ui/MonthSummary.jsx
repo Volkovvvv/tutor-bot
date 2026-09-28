@@ -1,6 +1,8 @@
 import { monthSummary } from '../../../entities/lesson/index.js'
 import { monthTitle } from '../../../shared/lib/date.js'
 import { formatMoney, lessonsWord } from '../../../shared/lib/format.js'
+import { Pill } from '../../../shared/ui/index.js'
+import s from './MonthSummary.module.css'
 
 /**
  * Главный блок экрана занятий: сколько заработано за месяц.
@@ -12,18 +14,18 @@ export default function MonthSummary({ lessons, students }) {
   const { doneCount, earned, owed } = monthSummary(lessons, students)
 
   return (
-    <div className="hero">
-      <div className="hero-label">заработано за {monthTitle()}</div>
-      <div className="hero-amount">{formatMoney(earned)}</div>
+    <div className={s.hero}>
+      <Pill>заработано за {monthTitle()}</Pill>
+      <div className={s.amount}>{formatMoney(earned)}</div>
 
-      <div className="hero-stats">
-        <div className="hero-stat">
-          <div className="hero-stat-value">{doneCount}</div>
-          <div className="hero-stat-label">{lessonsWord(doneCount)} провели</div>
+      <div className={s.stats}>
+        <div className={s.stat}>
+          <div className={s.statValue}>{doneCount}</div>
+          <div className={s.statLabel}>{lessonsWord(doneCount)} провели</div>
         </div>
-        <div className="hero-stat">
-          <div className="hero-stat-value">{formatMoney(owed)}</div>
-          <div className="hero-stat-label">ждём оплаты</div>
+        <div className={s.stat}>
+          <div className={s.statValue}>{formatMoney(owed)}</div>
+          <div className={s.statLabel}>ждём оплаты</div>
         </div>
       </div>
     </div>

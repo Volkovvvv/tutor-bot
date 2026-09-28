@@ -1,0 +1,14 @@
+.row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.hint {
+  margin-top: 3px;
+  font-size: 13px;
+  color: var(--muted);
+}

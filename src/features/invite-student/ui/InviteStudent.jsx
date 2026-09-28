@@ -1,5 +1,8 @@
 import { INVITE_LABELS, INVITE_STATUS } from '../../../entities/student/index.js'
 import { copyText, openChat, shareText } from '../../../shared/api/telegram.js'
+import { cx } from '../../../shared/lib/cx.js'
+import { Button, Card, Note, Section } from '../../../shared/ui/index.js'
+import s from './InviteStudent.module.css'
 
 // Приглашение ученика к боту. Бот сможет писать ему только после того,
 // как ученик сам нажмёт «Начать» — Telegram не разрешает писать первым.
@@ -23,50 +26,44 @@ export default function InviteStudent({ student, onInvite, onNotify, inviteLink 
   }
 
   return (
-    <>
-      <div className="section-title">Приглашение</div>
-
-      <div className={`invite-status invite-${status}`}>
-        <span className="invite-dot" />
+    <Section title="Приглашение">
+      <Card className={cx(s.status, s[status])}>
+        <span className={s.dot} />
         {INVITE_LABELS[status]}
-      </div>
+      </Card>
 
       {status === INVITE_STATUS.accepted ? (
-        <div className="note">
-          Ученик подключён — бот сможет присылать ему напоминания.
-        </div>
+        <Note>Ученик подключён — бот сможет присылать ему напоминания.</Note>
       ) : (
         <>
-          <div className="actions">
-            <button className="btn" onClick={invite}>
-              {status === INVITE_STATUS.invited ? 'Отправить ещё раз' : 'Пригласить в бота'}
-            </button>
-            {inviteLink ? (
-              <button className="btn btn-secondary" onClick={copyLink}>
-                Скопировать ссылку
-              </button>
-            ) : null}
-            {student.username ? (
-              <button
-                className="btn btn-secondary"
-                onClick={() => {
-                  openChat(student)
-                  onNotify('Открываем чат…')
-                }}
-              >
-                Открыть чат
-              </button>
-            ) : null}
-          </div>
+          <Button onClick={invite}>
+            {status === INVITE_STATUS.invited ? 'Отправить ещё раз' : 'Пригласить в бота'}
+          </Button>
+          {inviteLink ? (
+            <Button variant="secondary" onClick={copyLink}>
+              Скопировать ссылку
+            </Button>
+          ) : null}
+          {student.username ? (
+            <Button
+              variant="secondary"
+              onClick={() => {
+                openChat(student)
+                onNotify('Открываем чат…')
+              }}
+            >
+              Открыть чат
+            </Button>
+          ) : null}
 
-          {inviteLink ? <div className="invite-link">{inviteLink}</div> : null}
+          {inviteLink ? <div className={s.link}>{inviteLink}</div> : null}
 
-          <div className="note">
+          <Note>
             Ученик должен открыть ссылку и нажать «Начать» — только после
             этого бот сможет ему писать.
-          </div>
+          </Note>
         </>
       )}
-    </>
+    </Section>
   )
 }

@@ -1,0 +1,28 @@
+.status {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 15px;
+  font-weight: 500;
+}
+
+.dot {
+  flex: 0 0 auto;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: var(--number);
+}
+
+.invited .dot { background: var(--warning); }
+.accepted .dot { background: var(--positive); }
+
+.link {
+  padding: 11px 13px;
+  border-radius: var(--radius-md);
+  background: var(--card);
+  color: var(--link);
+  font-family: var(--font-mono);
+  font-size: 13px;
+  word-break: break-all;
+}

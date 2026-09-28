@@ -1,4 +1,5 @@
 import { useEffect } from 'react'
+import s from './Toast.module.css'
 
 export default function Toast({ message, onHide }) {
   useEffect(() => {
@@ -8,5 +9,5 @@ export default function Toast({ message, onHide }) {
   }, [message, onHide])
 
   if (!message) return null
-  return <div className="toast">{message}</div>
+  return <div className={s.toast} role="status">{message}</div>
 }

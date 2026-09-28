@@ -1,4 +1,5 @@
 import { StudentCard } from '../../../entities/student/index.js'
+import { EmptyState, Stack } from '../../../shared/ui/index.js'
 
 export default function StudentList({ students, lessons, onOpen }) {
   // Индекс: иначе для каждого ученика пришлось бы фильтровать весь массив занятий
@@ -9,21 +10,23 @@ export default function StudentList({ students, lessons, onOpen }) {
 
   if (students.length === 0) {
     return (
-      <div className="empty">
-        <div className="empty-art">🎓</div>
-        <div className="empty-title">Здесь появятся ваши ученики</div>
+      <EmptyState icon="🎓" title="Здесь появятся ваши ученики">
         Пригласите первого — и напоминания о занятиях
         начнут приходить ему автоматически.
-      </div>
+      </EmptyState>
     )
   }
 
-  return students.map((s) => (
-    <StudentCard
-      key={s.id}
-      student={s}
-      lessonCount={countById.get(s.id) ?? 0}
-      onClick={() => onOpen(s.id)}
-    />
-  ))
+  return (
+    <Stack>
+      {students.map((s) => (
+        <StudentCard
+          key={s.id}
+          student={s}
+          lessonCount={countById.get(s.id) ?? 0}
+          onClick={() => onOpen(s.id)}
+        />
+      ))}
+    </Stack>
+  )
 }

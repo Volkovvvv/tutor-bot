@@ -1,5 +1,13 @@
 import { useCallback, useState } from 'react'
-import MainButton from '../../../shared/ui/MainButton.jsx'
+import {
+  BackButton,
+  Field,
+  Input,
+  MainButton,
+  Note,
+  PageTitle,
+  Screen,
+} from '../../../shared/ui/index.js'
 import { shareText } from '../../../shared/api/telegram.js'
 
 /**
@@ -40,41 +48,39 @@ export default function ImportFromTelegram({ onCreate, onCancel, onDone }) {
   }, [name, price, sending, onCreate, onDone])
 
   return (
-    <>
-      <button className="back" onClick={onCancel}>← Назад</button>
-      <h1>Пригласить ученика</h1>
+    <Screen>
+      <BackButton onClick={onCancel} />
+      <PageTitle>Пригласить ученика</PageTitle>
 
-      <div className="note">
+      <Note>
         Укажите имя и цену — приложение создаст карточку ученика и подготовит
         приглашение. Дальше Telegram предложит выбрать чат, куда его отправить.
-      </div>
+      </Note>
 
-      <div className="field">
-        <label>Имя</label>
-        <input
+      <Field label="Имя">
+        <Input
           value={name}
           onChange={(e) => setName(e.target.value)}
           placeholder="Например, Аня Петрова"
           autoFocus
         />
-      </div>
+      </Field>
 
-      <div className="field">
-        <label>Цена за занятие, ₽</label>
-        <input
+      <Field label="Цена за занятие, ₽">
+        <Input
           type="number"
           inputMode="numeric"
           value={price}
           onChange={(e) => setPrice(e.target.value)}
           placeholder="1500"
         />
-      </div>
+      </Field>
 
       <MainButton
         text={sending ? 'Отправляем…' : 'Выбрать чат и отправить'}
         onClick={send}
         disabled={!valid || sending}
       />
-    </>
+    </Screen>
   )
 }

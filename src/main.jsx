@@ -2,7 +2,7 @@ import React from 'react'
 import { createRoot } from 'react-dom/client'
 import { App } from './app/index.js'
 import { initTelegram } from './shared/api/telegram.js'
-import './shared/ui/index.css'
+import './shared/ui/styles/global.css'
 
 // ready() до первого рендера: useStore начинает вход сразу при монтировании,
 // а эффекты дочерних хуков выполняются раньше эффектов App. Если сказать

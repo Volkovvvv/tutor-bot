@@ -1,0 +1,8 @@
+.tag {
+  margin-top: 3px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.notifyOn { color: var(--success); }

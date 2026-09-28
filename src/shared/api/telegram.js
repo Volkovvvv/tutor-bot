@@ -62,7 +62,7 @@ export function applyTheme() {
 
   const styles = getComputedStyle(document.documentElement)
   const bg = styles.getPropertyValue('--bg').trim()
-  const header = styles.getPropertyValue('--brand-dark').trim()
+  const header = styles.getPropertyValue('--tg-header').trim()
 
   try {
     if (bg) tg.setBackgroundColor?.(bg)

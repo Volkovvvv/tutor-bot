@@ -1,0 +1,104 @@
+/* ─────────────────────────────────────────────────────────────
+   Нижнее меню в духе Liquid Glass: парящая стеклянная пилюля
+   с бликами по кромке и лаймовой «каплей» под активным разделом,
+   которая перетекает между пунктами с пружинкой.
+
+   Без преломления фона: SVG-фильтры в backdrop-filter работают
+   только в Chromium, а Telegram на iOS/macOS — это WebKit.
+   ───────────────────────────────────────────────────────────── */
+
+.bar {
+  --pad: 5px;
+  --gap: 4px;
+
+  position: fixed;
+  left: 50%;
+  bottom: calc(12px + var(--safe-bottom));
+  z-index: 20;
+  transform: translateX(-50%);
+  display: flex;
+  gap: var(--gap);
+  width: min(528px, calc(100% - 32px));
+  padding: var(--pad);
+  border-radius: var(--radius-pill);
+  isolation: isolate;
+
+  /* Стекло: сверху светлее — свет падает сверху */
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.52) 0%, rgba(255, 255, 255, 0.26) 100%);
+  backdrop-filter: blur(20px) saturate(1.8);
+  -webkit-backdrop-filter: blur(20px) saturate(1.8);
+
+  box-shadow:
+    /* толщина стекла: яркая верхняя кромка и слабая нижняя */
+    inset 0 1px 0 rgba(255, 255, 255, 0.9),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.3),
+    /* тонкий светлый контур по всему краю */
+    inset 0 0 0 1px rgba(255, 255, 255, 0.35),
+    /* внутреннее свечение у краёв — объём линзы */
+    inset 0 0 18px rgba(255, 255, 255, 0.25),
+    /* тень под пилюлей, фиолетовая, как везде */
+    0 14px 32px rgba(60, 46, 110, 0.28),
+    0 2px 6px rgba(60, 46, 110, 0.12);
+}
+
+/* Блик: мягкое пятно света в левом верхнем углу */
+.bar::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  border-radius: inherit;
+  background:
+    radial-gradient(120% 90% at 18% -10%, rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0) 55%),
+    radial-gradient(80% 60% at 90% 120%, rgba(216, 238, 126, 0.18) 0%, rgba(216, 238, 126, 0) 60%);
+  pointer-events: none;
+}
+
+/* «Капля» под активным разделом. Ширина — доля от числа пунктов,
+   позиция — индекс активного; оба приходят CSS-переменными из JSX. */
+.thumb {
+  position: absolute;
+  top: var(--pad);
+  bottom: var(--pad);
+  left: var(--pad);
+  z-index: 0;
+  width: calc((100% - 2 * var(--pad) - (var(--count) - 1) * var(--gap)) / var(--count));
+  border-radius: var(--radius-pill);
+  transform: translateX(calc(var(--index) * (100% + var(--gap))));
+  /* Перелёт с небольшим перехлёстом — пружинка */
+  transition: transform 0.45s cubic-bezier(0.34, 1.4, 0.64, 1);
+
+  background: linear-gradient(180deg, #e6f5a0 0%, var(--accent) 55%, #cfe56c 100%);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.85),
+    inset 0 -2px 4px rgba(120, 140, 30, 0.18),
+    0 6px 16px rgba(60, 46, 110, 0.22);
+  pointer-events: none;
+}
+
+.tab {
+  position: relative;
+  z-index: 1;
+  flex: 1;
+  min-height: 48px;
+  padding: 10px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: transparent;
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-size: 16px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.12s ease;
+}
+
+.tab:active { transform: scale(0.96); }
+
+.active { color: var(--accent-ink); }
+
+@media (prefers-reduced-motion: reduce) {
+  .thumb { transition: none; }
+}

@@ -1,5 +1,15 @@
 import { useCallback, useState } from 'react'
-import MainButton from '../../../shared/ui/MainButton.jsx'
+import {
+  BackButton,
+  EmptyState,
+  Field,
+  Input,
+  MainButton,
+  PageTitle,
+  Row,
+  Screen,
+  Select,
+} from '../../../shared/ui/index.js'
 import { todayISO } from '../../../shared/lib/date.js'
 
 export default function AddLessonForm({ students, onSave, onCancel, presetStudentId }) {
@@ -16,40 +26,37 @@ export default function AddLessonForm({ students, onSave, onCancel, presetStuden
 
   if (students.length === 0) {
     return (
-      <>
-        <button className="back" onClick={onCancel}>← Назад</button>
-        <h1>Новое занятие</h1>
-        <div className="empty">Сначала добавьте хотя бы одного ученика.</div>
-      </>
+      <Screen>
+        <BackButton onClick={onCancel} />
+        <PageTitle>Новое занятие</PageTitle>
+        <EmptyState>Сначала добавьте хотя бы одного ученика.</EmptyState>
+      </Screen>
     )
   }
 
   return (
-    <>
-      <button className="back" onClick={onCancel}>← Назад</button>
-      <h1>Новое занятие</h1>
+    <Screen>
+      <BackButton onClick={onCancel} />
+      <PageTitle>Новое занятие</PageTitle>
 
-      <div className="field">
-        <label>Ученик</label>
-        <select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
+      <Field label="Ученик">
+        <Select value={studentId} onChange={(e) => setStudentId(e.target.value)}>
           {students.map((s) => (
             <option key={s.id} value={s.id}>{s.name}</option>
           ))}
-        </select>
-      </div>
+        </Select>
+      </Field>
 
-      <div className="row-2">
-        <div className="field">
-          <label>Дата</label>
-          <input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
-        </div>
-        <div className="field">
-          <label>Время</label>
-          <input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
-        </div>
-      </div>
+      <Row>
+        <Field label="Дата">
+          <Input type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+        </Field>
+        <Field label="Время">
+          <Input type="time" value={time} onChange={(e) => setTime(e.target.value)} />
+        </Field>
+      </Row>
 
       <MainButton text="Сохранить" onClick={save} disabled={!valid} />
-    </>
+    </Screen>
   )
 }

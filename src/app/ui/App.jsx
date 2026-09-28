@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { applyTheme, tg } from '../../shared/api/telegram.js'
-import Toast from '../../shared/ui/Toast.jsx'
+import { AppShell, EmptyState, TabBar, Toast } from '../../shared/ui/index.js'
 import { indexById } from '../../entities/student/index.js'
 import { StudentsPage } from '../../pages/students/index.js'
 import { LessonsPage } from '../../pages/lessons/index.js'
@@ -11,6 +11,11 @@ import { AddLessonForm } from '../../features/add-lesson/index.js'
 import { ImportFromTelegram } from '../../features/import-from-telegram/index.js'
 import { useStore } from '../model/useStore.js'
 import { backTarget, LIST_VIEWS } from '../model/navigation.js'
+
+const TABS = [
+  { value: 'students', label: 'Ученики' },
+  { value: 'lessons', label: 'Занятия' },
+]
 
 export default function App() {
   const store = useStore()
@@ -95,42 +100,26 @@ export default function App() {
   // а потому что запрос ещё не пришёл.
   if (store.authError) {
     return (
-      <div className="app">
-        <div className="empty">
-          Не удалось подключиться: {store.authError}
+      <AppShell>
+        <EmptyState title="Не удалось подключиться">
+          {store.authError}
           <br />
           Откройте приложение из Telegram и попробуйте ещё раз.
-        </div>
-      </div>
+        </EmptyState>
+      </AppShell>
     )
   }
 
   if (!store.ready) {
     return (
-      <div className="app">
-        <div className="empty">Загрузка…</div>
-      </div>
+      <AppShell>
+        <EmptyState>Загрузка…</EmptyState>
+      </AppShell>
     )
   }
 
   return (
-    <div className="app">
-      {LIST_VIEWS.includes(view.name) ? (
-        <div className="tabs">
-          <button
-            className={`tab ${view.name === 'students' ? 'active' : ''}`}
-            onClick={() => setView({ name: 'students' })}
-          >
-            Ученики
-          </button>
-          <button
-            className={`tab ${view.name === 'lessons' ? 'active' : ''}`}
-            onClick={() => setView({ name: 'lessons' })}
-          >
-            Занятия
-          </button>
-        </div>
-      ) : null}
+    <AppShell>
 
       {view.name === 'students' ? (
         <StudentsPage
@@ -201,7 +190,13 @@ export default function App() {
         />
       ) : null}
 
+      {/* Нижнее меню — только на корневых списках. На остальных экранах
+          внизу системная MainButton Telegram, и они бы наложились. */}
+      {LIST_VIEWS.includes(view.name) ? (
+        <TabBar items={TABS} value={view.name} onChange={(name) => setView({ name })} />
+      ) : null}
+
       <Toast message={toast} onHide={hideToast} />
-    </div>
+    </AppShell>
   )
 }
