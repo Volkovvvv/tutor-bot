@@ -70,7 +70,13 @@ export const api = {
 // Вход по initData. Telegram отдаёт initData как готовую подписанную
 // строку — бэкенд проверяет её HMAC-подписью токена бота.
 export async function login() {
-  const initData = getInitData()
+  let initData = getInitData()
+  // Локальная разработка в обычном браузере: подписанный initData тестового
+  // пользователя выдаёт dev-сервер (tools/vite-dev-telegram-login.js).
+  // В продакшен-сборке import.meta.env.DEV = false, ветка вырезается целиком.
+  if (!initData && import.meta.env.DEV) {
+    initData = await devInitData()
+  }
   if (!initData) {
     throw new ApiError(0, 'Приложение открыто не из Telegram — вход невозможен')
   }
@@ -88,6 +94,14 @@ export async function login() {
   const data = await res.json()
   setToken(data.accessToken)
   return data
+}
+
+async function devInitData() {
+  const res = await fetch('/__dev/init-data')
+  if (!res.ok) {
+    throw new ApiError(res.status, `Dev-вход не сработал: ${await res.text()}`)
+  }
+  return res.text()
 }
 
 export function logout() {
