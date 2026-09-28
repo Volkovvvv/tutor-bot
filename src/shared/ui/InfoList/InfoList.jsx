@@ -1,3 +1,4 @@
+import { cx } from '../../lib/cx.js'
 import Card from '../Card/Card.jsx'
 import s from './InfoList.module.css'
 
@@ -6,11 +7,12 @@ export function InfoList({ children }) {
   return <Card className={s.list}>{children}</Card>
 }
 
-export function InfoRow({ label, children }) {
+/** tone: default | danger (долг) | link (username) */
+export function InfoRow({ label, tone, children }) {
   return (
     <div className={s.row}>
       <span>{label}</span>
-      <b className={s.value}>{children}</b>
+      <b className={cx(s.value, tone && s[tone])}>{children}</b>
     </div>
   )
 }

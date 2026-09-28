@@ -16,6 +16,13 @@ export const INVITE_LABELS = {
   accepted: 'Подключён',
 }
 
+// Короткая метка для списка учеников: [текст, тон бейджа]
+export const BOT_BADGES = {
+  none: ['Не в боте', 'negative'],
+  invited: ['Приглашён', 'neutral'],
+  accepted: ['В боте', 'positive'],
+}
+
 // Настройки уведомлений конкретного ученика.
 // Их применяет бот на втором этапе; приложение только хранит и показывает.
 export function defaultNotifySettings() {

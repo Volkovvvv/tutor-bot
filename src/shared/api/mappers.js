@@ -32,6 +32,8 @@ export function studentFromApi(s) {
   return {
     id: s.id,
     name: s.name,
+    // Свободная пометка репетитора: «9 класс · ОГЭ»
+    note: s.note ?? null,
     // API отдаёт копейки — UI всегда работал в рублях.
     price: Math.round(s.price / 100),
     tgId: null,
@@ -87,6 +89,9 @@ export function lessonFromApi(l) {
     studentId: l.studentId,
     date,
     time,
+    duration: l.duration ?? 60,
+    // Снимок цены на момент создания: подъём цены ученику не переписывает прошлое
+    price: Math.round(l.price / 100),
     status: STATUS_FROM_API[l.status] ?? 'planned',
     paid: l.paidAt !== null,
   }

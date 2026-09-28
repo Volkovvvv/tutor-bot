@@ -1,0 +1,107 @@
+.block { display: flex; flex-direction: column; gap: 8px; }
+
+.label {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.chip,
+.day,
+.time {
+  border: none;
+  background: var(--card-soft);
+  color: var(--ink);
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chip {
+  padding: 8px 13px;
+  border-radius: var(--radius-pill);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+/* Две недели в строку с горизонтальной прокруткой */
+.days {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 46px;
+  gap: 6px;
+  overflow-x: auto;
+  margin: 0 -20px;
+  padding: 0 20px 2px;
+  scrollbar-width: none;
+}
+
+.days::-webkit-scrollbar { display: none; }
+
+.day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 7px 0;
+  border-radius: 14px;
+}
+
+.dayWeek {
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.dayNum {
+  font-family: var(--font-display);
+  font-size: 18px;
+  font-weight: 600;
+  line-height: 1.1;
+}
+
+.times {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.time {
+  padding: 9px 0;
+  border-radius: 12px;
+  font-family: var(--font-display);
+  font-size: 15px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.busy {
+  background: transparent;
+  color: #b0a9cc;
+  text-decoration: line-through;
+  cursor: default;
+}
+
+.on { background: var(--accent); color: var(--accent-ink); }
+
+.custom {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted);
+}
+
+.customInput {
+  width: 130px;
+  padding: 8px 12px;
+  box-shadow: none;
+  background: var(--card-soft);
+}

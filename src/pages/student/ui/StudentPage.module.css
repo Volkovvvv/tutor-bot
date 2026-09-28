@@ -1,0 +1,26 @@
+.head {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.headText {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.note {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.time {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--number);
+  font-variant-numeric: tabular-nums;
+}

@@ -1,13 +1,16 @@
-import Pill from '../Pill/Pill.jsx'
 import { Stack } from '../Layout/Layout.jsx'
 import s from './Section.module.css'
 
-// Смысловой блок экрана: лаймовая метка-заголовок и содержимое под ней
-export default function Section({ title, children }) {
+// Смысловой блок экрана: мелкий заголовок капсом и содержимое под ним.
+// aside — метка рядом с заголовком
+export default function Section({ title, aside, children }) {
   return (
-    <section className={s.section}>
+    <section>
       <Stack>
-        <Pill as="h2">{title}</Pill>
+        <div className={s.head}>
+          <h2 className={s.title}>{title}</h2>
+          {aside}
+        </div>
         {children}
       </Stack>
     </section>

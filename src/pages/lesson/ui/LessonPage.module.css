@@ -1,0 +1,14 @@
+.head {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.nameLink {
+  align-self: flex-start;
+  padding: 0;
+  border: none;
+  background: transparent;
+  text-align: left;
+  cursor: pointer;
+}

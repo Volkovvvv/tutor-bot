@@ -6,10 +6,12 @@
   padding: 3px;
   border: none;
   border-radius: 15px;
-  background: #d9d3f3;
+  background: #dcd7f0;
   cursor: pointer;
-  transition: background 0.15s;
+  transition: background 0.2s;
 }
+
+.switch:disabled { cursor: default; }
 
 .knob {
   width: 24px;
@@ -17,8 +19,8 @@
   border-radius: 50%;
   background: #fff;
   box-shadow: 0 2px 6px rgba(60, 46, 110, 0.25);
-  transition: transform 0.15s, background 0.15s;
+  transition: transform 0.2s;
 }
 
 .on { background: var(--accent); }
-.on .knob { transform: translateX(20px); background: var(--ink); }
+.on .knob { transform: translateX(20px); }

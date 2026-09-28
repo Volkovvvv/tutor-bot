@@ -1,12 +1,13 @@
-.list { padding-top: 4px; padding-bottom: 4px; }
+.list { padding-top: 2px; padding-bottom: 2px; }
 
 .row {
   display: flex;
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  padding: 11px 0;
-  font-size: 15px;
+  min-height: 48px;
+  padding: 10px 0;
+  font-size: 14.5px;
   font-weight: 500;
   color: var(--muted);
 }
@@ -16,8 +17,11 @@
 .value {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 18px;
+  font-size: 17px;
   color: var(--ink);
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
+
+.danger { color: var(--danger); }
+.link { color: var(--link); }

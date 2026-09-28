@@ -88,8 +88,8 @@ npm run preview   # локальная проверка собранной ве�
 ```
 src/
 ├── app/        инициализация, состояние, навигация
-├── pages/      экраны: students, lessons, student, lesson
-├── widgets/    составные блоки: month-summary, lesson-list, student-list
+├── pages/      экраны: today, calendar, students, money, student, lesson
+├── widgets/    составные блоки: month-summary, student-list
 ├── features/   действия пользователя: add-student, add-lesson,
 │               edit-lesson-status, import-from-telegram, contact-student,
 │               invite-student, notify-settings

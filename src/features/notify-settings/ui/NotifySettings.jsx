@@ -1,95 +1,88 @@
-import { canNotify } from '../../../entities/student/index.js'
-import {
-  ChipGroup,
-  FieldGroup,
-  Input,
-  Note,
-  Row,
-  Section,
-  ToggleRow,
-} from '../../../shared/ui/index.js'
+import { INVITE_STATUS } from '../../../entities/student/index.js'
+import { Group, GroupRow, Section, Switch } from '../../../shared/ui/index.js'
+import s from './NotifySettings.module.css'
 
-const BEFORE_HOURS = [
-  { value: 0, label: 'Выкл' },
-  { value: 2, label: 'За 2 ч' },
-  { value: 24, label: 'За сутки' },
-  { value: 48, label: 'За 2 дня' },
+// Переключатели → поля настроек на сервере. «Выключено» — это 0:
+// так планировщик уже понимает beforeHours/beforeMinutes
+const ROWS = [
+  {
+    title: 'За 24 часа',
+    hint: 'Первое напоминание накануне',
+    on: (n) => n.beforeHours > 0,
+    patch: (on) => ({ beforeHours: on ? 24 : 0 }),
+  },
+  {
+    title: 'За 1 час',
+    hint: 'Повтор перед началом',
+    on: (n) => n.beforeMinutes > 0,
+    patch: (on) => ({ beforeMinutes: on ? 60 : 0 }),
+  },
+  {
+    title: 'О долге',
+    hint: 'Если урок не оплачен к вечеру',
+    on: (n) => n.debtReminder,
+    patch: (on) => ({ debtReminder: on }),
+  },
 ]
 
-const BEFORE_MINUTES = [
-  { value: 0, label: 'Выкл' },
-  { value: 30, label: 'За 30 мин' },
-  { value: 60, label: 'За час' },
-]
-
-// Настройки хранятся у ученика, применять их будет бот.
-// Пока бота нет, экран работает как черновик конфигурации.
+// Настройки хранятся у ученика, применяет их бот. Пока ученик
+// не подключился, блок приглушён — настройки заработают после «Начать»
 export default function NotifySettings({ student, onChange }) {
   const notify = student.notify
   if (!notify) return null
 
-  const active = canNotify(student)
-  const set = (patch) => onChange(student.id, { ...notify, ...patch })
+  const connected = student.inviteStatus === INVITE_STATUS.accepted
+  // Выключенный общий флаг показываем как «всё выключено»
+  const isOn = (row) => notify.enabled && row.on(notify)
+
+  const set = (patch) => {
+    const next = { ...notify, ...patch }
+    // Общий флаг включён, пока включено хоть одно напоминание
+    next.enabled = ROWS.some((row) => row.on(next))
+    onChange(student.id, next)
+  }
+
+  const toggle = (row, on) => {
+    // Включая один пункт после общего «выкл», остальные тоже гасим явно
+    const base = notify.enabled ? {} : Object.assign({}, ...ROWS.map((r) => r.patch(false)))
+    set({ ...base, ...row.patch(on) })
+  }
 
   return (
-    <Section title="Уведомления ученику">
-      <ToggleRow
-        title="Присылать напоминания"
-        hint="Отправляет бот в Telegram"
-        checked={notify.enabled}
-        onChange={(enabled) => set({ enabled })}
-      />
-
-      {notify.enabled ? (
-        <>
-          <FieldGroup label="Напомнить заранее">
-            <ChipGroup
-              options={BEFORE_HOURS}
-              value={notify.beforeHours}
-              onChange={(beforeHours) => set({ beforeHours })}
+    <Section title="Напоминания через бота">
+      <div className={connected ? undefined : s.dimmed}>
+        <Group>
+          {ROWS.map((row) => (
+            <GroupRow
+              key={row.title}
+              title={row.title}
+              subtitle={row.hint}
+              trailing={<Switch checked={isOn(row)} onChange={(on) => toggle(row, on)} label={row.title} />}
             />
-          </FieldGroup>
-
-          <FieldGroup label="И ещё раз перед занятием">
-            <ChipGroup
-              options={BEFORE_MINUTES}
-              value={notify.beforeMinutes}
-              onChange={(beforeMinutes) => set({ beforeMinutes })}
-            />
-          </FieldGroup>
-
-          <ToggleRow
-            title="Напоминать об оплате"
-            hint="Если есть прошедшие неоплаченные занятия"
-            checked={notify.debtReminder}
-            onChange={(debtReminder) => set({ debtReminder })}
+          ))}
+          <GroupRow
+            title="Тихие часы"
+            subtitle="Ночью бот молчит"
+            trailing={
+              <div className={s.quiet}>
+                <input
+                  type="time"
+                  aria-label="Тихие часы с"
+                  value={notify.quietFrom}
+                  onChange={(e) => set({ quietFrom: e.target.value })}
+                />
+                –
+                <input
+                  type="time"
+                  aria-label="Тихие часы до"
+                  value={notify.quietTo}
+                  onChange={(e) => set({ quietTo: e.target.value })}
+                />
+              </div>
+            }
           />
-
-          <FieldGroup label="Не беспокоить">
-            <Row>
-              <Input
-                type="time"
-                aria-label="С"
-                value={notify.quietFrom}
-                onChange={(e) => set({ quietFrom: e.target.value })}
-              />
-              <Input
-                type="time"
-                aria-label="До"
-                value={notify.quietTo}
-                onChange={(e) => set({ quietTo: e.target.value })}
-              />
-            </Row>
-          </FieldGroup>
-        </>
-      ) : null}
-
-      {!active && notify.enabled ? (
-        <Note>
-          Настройки сохранены, но напоминания начнут приходить только после того,
-          как ученик подключится по приглашению.
-        </Note>
-      ) : null}
+        </Group>
+      </div>
     </Section>
   )
 }

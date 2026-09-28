@@ -1,3 +1,17 @@
+.header {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
 .title {
   margin: 0;
   font-family: var(--font-display);
@@ -7,4 +21,10 @@
   text-transform: uppercase;
   color: var(--on-ground);
   text-shadow: 0 2px 14px rgba(60, 46, 110, 0.22);
+}
+
+.subtitle {
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--ink);
 }

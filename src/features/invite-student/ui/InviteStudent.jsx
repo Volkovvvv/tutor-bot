@@ -1,15 +1,34 @@
-import { INVITE_LABELS, INVITE_STATUS } from '../../../entities/student/index.js'
-import { copyText, openChat, shareText } from '../../../shared/api/telegram.js'
+import { INVITE_STATUS } from '../../../entities/student/index.js'
+import { copyText, shareText } from '../../../shared/api/telegram.js'
 import { cx } from '../../../shared/lib/cx.js'
-import { Button, Card, Note, Section } from '../../../shared/ui/index.js'
+import { Button, Card } from '../../../shared/ui/index.js'
 import s from './InviteStudent.module.css'
 
-// Приглашение ученика к боту. Бот сможет писать ему только после того,
+const COPY = {
+  [INVITE_STATUS.none]: {
+    title: 'Не подключён к боту',
+    text: 'Бот не может написать первым. Отправьте ученику ссылку-приглашение.',
+    action: 'Пригласить в бота',
+  },
+  [INVITE_STATUS.invited]: {
+    title: 'Приглашение отправлено',
+    text: 'Ждём, когда ученик откроет ссылку и нажмёт «Начать». До этого бот не может ему написать.',
+    action: 'Отправить ссылку ещё раз',
+  },
+  [INVITE_STATUS.accepted]: {
+    title: 'Подключён к боту',
+    text: 'Напоминания и сообщения уходят ученику в личку от бота.',
+    action: null,
+  },
+}
+
+// Карточка статуса ученика в боте. Бот сможет писать ему только после того,
 // как ученик сам нажмёт «Начать» — Telegram не разрешает писать первым.
-// Код и ссылку теперь генерирует сервер (POST /students/:id/invite),
-// поэтому приглашение асинхронное — кнопка недоступна на время запроса.
+// Код и ссылку генерирует сервер (POST /students/:id/invite),
+// поэтому приглашение асинхронное.
 export default function InviteStudent({ student, onInvite, onNotify, inviteLink }) {
   const status = student.inviteStatus ?? INVITE_STATUS.none
+  const copy = COPY[status]
 
   const invite = async () => {
     const result = await onInvite(student.id)
@@ -21,49 +40,29 @@ export default function InviteStudent({ student, onInvite, onNotify, inviteLink 
   }
 
   const copyLink = () => {
-    if (!inviteLink) return
     onNotify(copyText(inviteLink) ? 'Ссылка скопирована' : 'Не удалось скопировать')
   }
 
   return (
-    <Section title="Приглашение">
-      <Card className={cx(s.status, s[status])}>
-        <span className={s.dot} />
-        {INVITE_LABELS[status]}
-      </Card>
+    <Card className={s.card}>
+      <div className={s.head}>
+        <span className={cx(s.dot, s[status])} />
+        <span className={s.title}>{copy.title}</span>
+      </div>
+      <span className={s.text}>{copy.text}</span>
 
-      {status === INVITE_STATUS.accepted ? (
-        <Note>Ученик подключён — бот сможет присылать ему напоминания.</Note>
-      ) : (
-        <>
-          <Button onClick={invite}>
-            {status === INVITE_STATUS.invited ? 'Отправить ещё раз' : 'Пригласить в бота'}
-          </Button>
-          {inviteLink ? (
-            <Button variant="secondary" onClick={copyLink}>
-              Скопировать ссылку
-            </Button>
-          ) : null}
-          {student.username ? (
-            <Button
-              variant="secondary"
-              onClick={() => {
-                openChat(student)
-                onNotify('Открываем чат…')
-              }}
-            >
-              Открыть чат
-            </Button>
-          ) : null}
+      {inviteLink && status !== INVITE_STATUS.accepted ? (
+        <button type="button" className={s.link} onClick={copyLink}>
+          <span className={s.linkText}>{inviteLink.replace(/^https?:\/\//, '')}</span>
+          <span className={s.linkAction}>копировать</span>
+        </button>
+      ) : null}
 
-          {inviteLink ? <div className={s.link}>{inviteLink}</div> : null}
-
-          <Note>
-            Ученик должен открыть ссылку и нажать «Начать» — только после
-            этого бот сможет ему писать.
-          </Note>
-        </>
-      )}
-    </Section>
+      {copy.action ? (
+        <Button className={s.action} onClick={invite}>
+          {copy.action}
+        </Button>
+      ) : null}
+    </Card>
   )
 }

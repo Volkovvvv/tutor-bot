@@ -1,0 +1,20 @@
+.name {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 16px;
+  text-transform: uppercase;
+}
+
+.sum {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  color: var(--number);
+  font-variant-numeric: tabular-nums;
+}
+
+.owed {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--danger);
+}

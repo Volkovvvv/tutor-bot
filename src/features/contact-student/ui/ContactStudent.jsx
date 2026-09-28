@@ -1,9 +1,9 @@
 import { openChat, shareText } from '../../../shared/api/telegram.js'
 import { debtMessage, scheduleMessage } from '../model/messages.js'
-import { Button, Note, Section } from '../../../shared/ui/index.js'
+import { Button } from '../../../shared/ui/index.js'
 
-// Кнопки связи с учеником. Реальную отправку от имени бота добавим,
-// когда появится бэкенд; пока открываем чат и передаём готовый текст.
+// Кнопки связи с учеником: открыть чат или отправить готовый текст
+// через системный выбор чата Telegram
 export default function ContactStudent({ student, upcoming, owed, onNotify }) {
   const canOpen = Boolean(student.username || student.tgId)
 
@@ -20,10 +20,12 @@ export default function ContactStudent({ student, upcoming, owed, onNotify }) {
   }
 
   return (
-    <Section title="Связь с учеником">
-      <Button onClick={write} disabled={!canOpen}>
-        Написать в Telegram
-      </Button>
+    <>
+      {canOpen ? (
+        <Button variant="secondary" onClick={write}>
+          Написать в Telegram
+        </Button>
+      ) : null}
       <Button variant="secondary" onClick={() => send(scheduleMessage(student, upcoming))}>
         Отправить расписание
       </Button>
@@ -32,12 +34,6 @@ export default function ContactStudent({ student, upcoming, owed, onNotify }) {
           Напомнить про оплату
         </Button>
       ) : null}
-      {!canOpen ? (
-        <Note>
-          Ученик добавлен вручную — чтобы писать ему из приложения, добавьте его
-          через «Выбрать из Telegram».
-        </Note>
-      ) : null}
-    </Section>
+    </>
   )
 }

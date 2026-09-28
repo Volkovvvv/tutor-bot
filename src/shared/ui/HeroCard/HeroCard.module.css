@@ -1,0 +1,28 @@
+.hero {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 22px;
+  background: var(--card);
+  color: var(--ink);
+  box-shadow: var(--shadow-cta);
+}
+
+.hero::after {
+  content: '+';
+  position: absolute;
+  right: 14px;
+  top: -20px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 110px;
+  color: rgba(143, 129, 207, 0.14);
+  transform: rotate(12deg);
+  pointer-events: none;
+}
+
+/* Содержимое поверх декоративного «+» */
+.hero > * { position: relative; z-index: 1; }

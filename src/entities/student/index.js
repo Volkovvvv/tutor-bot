@@ -1,6 +1,7 @@
 export {
   INVITE_STATUS,
   INVITE_LABELS,
+  BOT_BADGES,
   createStudent,
   defaultNotifySettings,
   indexById,

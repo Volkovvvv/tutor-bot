@@ -1,0 +1,29 @@
+.dimmed { opacity: 0.55; }
+
+.quiet {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  padding: 4px 8px;
+  border-radius: var(--radius-pill);
+  background: var(--card-soft);
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.quiet input {
+  width: 58px;
+  padding: 2px 0;
+  border: none;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  appearance: none;
+}
+
+.quiet input::-webkit-calendar-picker-indicator { display: none; }
+
+.quiet input:focus { outline: 2px solid var(--accent); border-radius: 6px; }

@@ -1,8 +1,7 @@
-.tag {
-  margin-top: 3px;
-  font-size: 12px;
+.price {
+  font-family: var(--font-display);
   font-weight: 600;
-  color: var(--link);
+  font-size: 17px;
+  color: var(--number);
+  font-variant-numeric: tabular-nums;
 }
-
-.notifyOn { color: var(--success); }

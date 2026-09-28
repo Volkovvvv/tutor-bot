@@ -1,1 +1,1 @@
-export { default as AddLessonForm } from './ui/AddLessonForm.jsx'
+export { default as AddLessonSheet } from './ui/AddLessonSheet.jsx'

@@ -22,7 +22,8 @@ function colorsFor(name) {
   return PALETTE[Math.abs(hash) % PALETTE.length]
 }
 
-export default function Avatar({ name }) {
+// size: normal — в списках, large — в шапке карточки ученика
+export default function Avatar({ name, size = 'normal' }) {
   const initials = name
     .split(' ')
     .filter(Boolean)
@@ -33,7 +34,7 @@ export default function Avatar({ name }) {
   const [background, color] = colorsFor(name)
 
   return (
-    <div className={s.avatar} style={{ background, color }}>
+    <div className={size === 'large' ? `${s.avatar} ${s.large}` : s.avatar} style={{ background, color }}>
       {initials || '?'}
     </div>
   )

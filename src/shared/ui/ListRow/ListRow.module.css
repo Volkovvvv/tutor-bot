@@ -1,3 +1,7 @@
+.withLeading { padding-left: 12px; }
+
+.dimmed { opacity: 0.6; }
+
 .row {
   display: flex;
   align-items: center;
@@ -9,27 +13,23 @@
 .title {
   font-family: var(--font-display);
   font-weight: 600;
-  font-size: 18px;
+  font-size: 17px;
   line-height: 1.15;
   text-transform: uppercase;
 }
 
 .subtitle {
   margin-top: 3px;
-  font-size: 14px;
+  font-size: 13.5px;
   font-weight: 500;
   color: var(--muted);
 }
 
 .trailing {
+  flex: 0 0 auto;
   display: flex;
   flex-direction: column;
   align-items: flex-end;
-  gap: 4px;
+  gap: 5px;
   white-space: nowrap;
-  font-family: var(--font-display);
-  font-weight: 600;
-  font-size: 18px;
-  color: var(--number);
-  font-variant-numeric: tabular-nums;
 }

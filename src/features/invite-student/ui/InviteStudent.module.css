@@ -1,28 +1,75 @@
-.status {
+.card {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  font-size: 15px;
-  font-weight: 500;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px;
 }
+
+.head { display: flex; align-items: center; gap: 10px; }
 
 .dot {
   flex: 0 0 auto;
   width: 10px;
   height: 10px;
   border-radius: 50%;
-  background: var(--number);
 }
 
-.invited .dot { background: var(--warning); }
-.accepted .dot { background: var(--positive); }
+.none { background: var(--danger); }
+.invited { background: var(--warning); }
+.accepted { background: var(--positive); }
+
+.title {
+  flex: 1;
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  text-transform: uppercase;
+}
+
+.text {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--muted);
+  text-wrap: pretty;
+}
 
 .link {
-  padding: 11px 13px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 14px;
+  border: none;
   border-radius: var(--radius-md);
-  background: var(--card);
-  color: var(--link);
+  background: var(--card-soft);
+  cursor: pointer;
+  text-align: left;
+}
+
+.linkText {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
   font-family: var(--font-mono);
   font-size: 13px;
-  word-break: break-all;
+  color: var(--ink);
+}
+
+.linkAction {
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--link);
+}
+
+/* Внутри карточки кнопка ниже и без тени */
+.action {
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 15px;
+  box-shadow: none;
 }
