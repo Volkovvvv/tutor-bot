@@ -8,9 +8,10 @@ import {
   Screen,
 } from '../../../shared/ui/index.js'
 
-export default function AddStudentForm({ onSave, onCancel }) {
+export default function AddStudentForm({ defaultPrice, onSave, onCancel }) {
   const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
+  // Цена из профиля репетитора — обычно она у всех учеников одна
+  const [price, setPrice] = useState(defaultPrice ? String(defaultPrice) : '')
 
   const valid = name.trim().length > 0 && Number(price) > 0
 

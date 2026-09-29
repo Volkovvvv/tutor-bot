@@ -2,6 +2,7 @@ import { ConflictException, Injectable, Logger, NotFoundException } from '@nestj
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
 import { generateInviteCode, isValidInviteCodeFormat } from './invite-code'
+import { inviteMessage } from './invite-message'
 
 /** Срок жизни приглашения. */
 const INVITE_TTL_HOURS = 72
@@ -49,7 +50,9 @@ export class InvitesService {
         name: true,
         userId: true,
         archivedAt: true,
-        tutor: { select: { user: { select: { firstName: true } } } },
+        tutor: {
+          select: { displayName: true, subjects: true, user: { select: { firstName: true } } },
+        },
       },
     })
     if (!student) throw new NotFoundException('Ученик не найден')
@@ -80,7 +83,12 @@ export class InvitesService {
       code,
       link: this.link(code),
       expiresAt,
-      message: this.message(student.name, code),
+      message: inviteMessage({
+        studentName: student.name,
+        tutorName: student.tutor.displayName,
+        subjects: student.tutor.subjects,
+        link: this.link(code),
+      }),
     }
   }
 
@@ -114,7 +122,7 @@ export class InvitesService {
             name: true,
             userId: true,
             archivedAt: true,
-            tutor: { select: { user: { select: { firstName: true } } } },
+            tutor: { select: { displayName: true, user: { select: { firstName: true } } } },
           },
         },
       },
@@ -195,7 +203,7 @@ export class InvitesService {
     return {
       studentId: invite.student.id,
       studentName: invite.student.name,
-      tutorName: invite.student.tutor.user.firstName,
+      tutorName: invite.student.tutor.displayName ?? invite.student.tutor.user.firstName,
     }
   }
 
@@ -224,12 +232,5 @@ export class InvitesService {
 
   private link(code: string): string {
     return `https://t.me/${this.botUsername}?start=${code}`
-  }
-
-  private message(studentName: string, code: string): string {
-    return (
-      `${studentName}, привет! Я буду присылать напоминания о занятиях через бота.\n\n` +
-      `Нажмите ссылку и кнопку «Начать» — этого достаточно:\n${this.link(code)}`
-    )
   }
 }

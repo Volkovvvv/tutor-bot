@@ -1,0 +1,164 @@
+.flow {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.progress { display: flex; gap: 6px; }
+
+.bar {
+  flex: 1;
+  height: 4px;
+  border-radius: var(--radius-pill);
+  background: rgba(255, 255, 255, 0.45);
+  transition: background 0.3s;
+}
+
+.barOn { background: var(--accent); }
+
+.hero {
+  margin: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 40px;
+  line-height: 1.04;
+  text-transform: uppercase;
+  color: var(--on-ground);
+  text-shadow: 0 2px 14px rgba(60, 46, 110, 0.22);
+}
+
+.lead,
+.text {
+  margin: 0;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+  text-wrap: pretty;
+}
+
+.lead { font-size: 16px; }
+.text { font-size: 15px; }
+
+.feature {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  border-radius: var(--radius);
+  background: var(--glass);
+}
+
+.featureNum {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 12px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.featureTitle {
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.featureText {
+  margin-top: 3px;
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+
+.chip {
+  padding: 11px 16px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--glass);
+  color: var(--ink);
+  font-family: var(--font-display);
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+
+.chipOn {
+  background: var(--accent);
+  box-shadow: 0 6px 16px rgba(60, 46, 110, 0.2);
+}
+
+.glass {
+  padding: 14px 16px;
+  border-radius: var(--radius);
+  background: var(--glass);
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  text-wrap: pretty;
+}
+
+/* Макет переписки в Telegram */
+.chat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(38, 34, 58, 0.14);
+}
+
+.bubble {
+  align-self: flex-start;
+  max-width: 92%;
+  padding: 10px 13px 10px;
+  border-radius: 18px 18px 18px 6px;
+  background: #fff;
+  box-shadow: 0 4px 12px rgba(60, 46, 110, 0.12);
+}
+
+.bubbleFrom {
+  margin-bottom: 3px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+.bubbleText {
+  font-size: 14.5px;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.startButton {
+  width: 92%;
+  padding: 10px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.7);
+  text-align: center;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--link);
+}
+
+/* Кнопки прижаты к низу экрана, когда содержимого мало */
+.actions {
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding-bottom: 4px;
+}

@@ -108,3 +108,24 @@ export function lessonToApi({ studentId, date, time }) {
 export function statusToApi(status) {
   return STATUS_TO_API[status] ?? 'PLANNED'
 }
+
+// Профиль репетитора: цена по умолчанию тоже в копейках на сервере
+export function tutorFromApi(t) {
+  return {
+    displayName: t.displayName,
+    telegramName: t.telegramName,
+    subjects: t.subjects,
+    defaultPrice: t.defaultPrice === null ? null : Math.round(t.defaultPrice / 100),
+    notifyBeforeHours: t.notifyBeforeHours,
+    notifyBeforeMinutes: t.notifyBeforeMinutes,
+    notifyDebtReminder: t.notifyDebtReminder,
+    onboardedAt: t.onboardedAt,
+  }
+}
+
+export function tutorToApi(patch) {
+  const { defaultPrice, ...rest } = patch
+  return defaultPrice === undefined
+    ? rest
+    : { ...rest, defaultPrice: defaultPrice === null ? null : Math.round(Number(defaultPrice) * 100) }
+}

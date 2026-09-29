@@ -125,6 +125,17 @@ GET  /api/auth/me      Authorization: Bearer <accessToken>
 
 Все, кроме `/auth/login` и `/health`, требуют `Authorization: Bearer <token>`.
 
+### Профиль репетитора
+
+```
+GET    /api/tutor   профиль кабинета; onboardedAt: null — показать онбординг
+PATCH  /api/tutor   { displayName?, subjects?, defaultPrice?, notifyBeforeHours?,
+                      notifyBeforeMinutes?, notifyDebtReminder?, onboarded? }
+```
+
+Напоминания из профиля копируются в настройки каждого нового ученика,
+имя и предметы подписывают текст приглашения.
+
 ### Ученики
 
 ```

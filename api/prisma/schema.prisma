@@ -47,6 +47,25 @@ model Tutor {
   id        String   @id @default(uuid())
   userId    String   @unique
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // ─── Профиль, заполняется в онбординге ───
+  // Как репетитора зовут ученики («Анна Сергеевна»). Подписывает
+  // приглашения; null — берём имя из Telegram.
+  displayName  String?
+  // Предметы в том виде, в каком их выбрал репетитор («Математика»).
+  subjects     String[] @default([])
+  // Цена занятия, которую форма нового ученика подставляет сама, в копейках.
+  defaultPrice Int?
+
+  // Напоминания для новых учеников — копируются в NotifySettings
+  // при создании карточки. Смысл полей тот же, что там.
+  notifyBeforeHours   Int     @default(24)
+  notifyBeforeMinutes Int     @default(60)
+  notifyDebtReminder  Boolean @default(true)
+
+  // Когда репетитор прошёл онбординг; null — показать его при входе.
+  onboardedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

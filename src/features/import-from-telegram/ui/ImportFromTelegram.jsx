@@ -20,9 +20,10 @@ import { shareText } from '../../../shared/api/telegram.js'
  * (тот же системный пикер, что и в carточке ученика), а не через список
  * контактов внутри приложения.
  */
-export default function ImportFromTelegram({ onCreate, onCancel, onDone }) {
+export default function ImportFromTelegram({ defaultPrice, onCreate, onCancel, onDone }) {
   const [name, setName] = useState('')
-  const [price, setPrice] = useState('')
+  // Цена из профиля репетитора — обычно она у всех учеников одна
+  const [price, setPrice] = useState(defaultPrice ? String(defaultPrice) : '')
   const [sending, setSending] = useState(false)
 
   const valid = name.trim().length > 0 && Number(price) > 0

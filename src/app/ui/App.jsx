@@ -12,6 +12,7 @@ import { LessonPage } from '../../pages/lesson/index.js'
 import { AddStudentForm } from '../../features/add-student/index.js'
 import { AddLessonSheet } from '../../features/add-lesson/index.js'
 import { ImportFromTelegram } from '../../features/import-from-telegram/index.js'
+import { Onboarding } from '../../features/onboarding/index.js'
 import { useStore } from '../model/useStore.js'
 import { backLabel, backPast, backTarget, LIST_VIEWS, openView, TABS } from '../model/navigation.js'
 
@@ -152,6 +153,23 @@ export default function App() {
     )
   }
 
+  // Первый вход: знакомство вместо вкладок, пока репетитор его не пройдёт
+  if (store.profile && !store.profile.onboardedAt) {
+    return (
+      <AppShell>
+        <Onboarding
+          profile={store.profile}
+          onSave={store.updateProfile}
+          onInvite={store.createAndInvite}
+          onNotify={setToast}
+        />
+        <Toast message={toast} onHide={hideToast} />
+      </AppShell>
+    )
+  }
+
+  const defaultPrice = store.profile?.defaultPrice ?? null
+
   return (
     <AppShell>
 
@@ -223,11 +241,12 @@ export default function App() {
       ) : null}
 
       {view.name === 'addStudent' ? (
-        <AddStudentForm onSave={handleAddStudent} onCancel={goBack} />
+        <AddStudentForm defaultPrice={defaultPrice} onSave={handleAddStudent} onCancel={goBack} />
       ) : null}
 
       {view.name === 'importStudents' ? (
         <ImportFromTelegram
+          defaultPrice={defaultPrice}
           onCreate={store.createAndInvite}
           onCancel={goBack}
           onDone={(message) => {

@@ -8,6 +8,8 @@ import {
   statusToApi,
   studentFromApi,
   studentToApi,
+  tutorFromApi,
+  tutorToApi,
 } from '../../shared/api/mappers.js'
 
 /**
@@ -28,6 +30,8 @@ function reportError(message) {
 export function useStore() {
   const [students, setStudents] = useState([])
   const [lessons, setLessons] = useState([])
+  // Профиль репетитора: имя для учеников, предметы, умолчания, онбординг
+  const [profile, setProfile] = useState(null)
   const [ready, setReady] = useState(false)
   const [authError, setAuthError] = useState(null)
   // Ссылка приглашения по id ученика — сервер не хранит её на карточке,
@@ -42,11 +46,13 @@ export function useStore() {
     async function boot() {
       try {
         await login()
-        const [studentsRes, lessonsRes] = await Promise.all([
+        const [studentsRes, lessonsRes, tutorRes] = await Promise.all([
           api.get('/students'),
           api.get('/lessons'),
+          api.get('/tutor'),
         ])
         if (cancelled) return
+        setProfile(tutorFromApi(tutorRes))
         setStudents(studentsRes.map(studentFromApi))
         setLessons(lessonsRes.map(lessonFromApi))
         setReady(true)
@@ -204,6 +210,22 @@ export function useStore() {
       })
   }, [])
 
+  // Не оптимистично: онбординг должен дождаться сохранения, прежде чем
+  // идти дальше. Возвращает обновлённый профиль или null при ошибке.
+  const updateProfile = useCallback((patch) => {
+    return api
+      .patch('/tutor', tutorToApi(patch))
+      .then((res) => {
+        const next = tutorFromApi(res)
+        setProfile(next)
+        return next
+      })
+      .catch((e) => {
+        reportError(e.message)
+        return null
+      })
+  }, [])
+
   const updateNotify = useCallback((id, notify) => {
     const prev = students
     setStudents((list) => list.map((s) => (s.id === id ? { ...s, notify } : s)))
@@ -221,6 +243,8 @@ export function useStore() {
     authError,
     students,
     lessons,
+    profile,
+    updateProfile,
     inviteLinks,
     addStudent,
     createAndInvite,

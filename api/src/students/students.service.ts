@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
 import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { TutorsService } from '../tutors/tutors.service'
 import type { CreateStudentDto } from './dto/create-student.dto'
 import type { ListStudentsDto } from './dto/list-students.dto'
 import type { UpdateNotifySettingsDto } from './dto/notify-settings.dto'
@@ -38,7 +39,10 @@ export type StudentView = Prisma.StudentGetPayload<{ select: typeof STUDENT_SELE
 
 @Injectable()
 export class StudentsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly tutors: TutorsService,
+  ) {}
 
   /**
    * Каждый метод принимает tutorId первым аргументом и подставляет его
@@ -74,6 +78,10 @@ export class StudentsService {
   }
 
   async create(tutorId: string, dto: CreateStudentDto): Promise<StudentView> {
+    // Напоминания по умолчанию — из профиля репетитора (онбординг),
+    // явно переданные в запросе поля важнее
+    const notify = { ...(await this.tutors.notifyDefaults(tutorId)), ...dto.notify }
+
     return this.prisma.student.create({
       data: {
         tutorId,
@@ -82,7 +90,7 @@ export class StudentsService {
         note: dto.note?.trim() ?? null,
         // Настройки создаём всегда: планировщику проще читать строку
         // с дефолтами, чем обрабатывать их отсутствие.
-        notify: { create: dto.notify ?? {} },
+        notify: { create: notify },
       },
       select: STUDENT_SELECT,
     })

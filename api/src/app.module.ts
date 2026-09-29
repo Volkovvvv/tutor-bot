@@ -13,6 +13,7 @@ import { LessonsModule } from './lessons/lessons.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { RemindersModule } from './reminders/reminders.module'
 import { StudentsModule } from './students/students.module'
+import { TutorsModule } from './tutors/tutors.module'
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { StudentsModule } from './students/students.module'
     ScheduleModule.forRoot(),
     PrismaModule,
     AuthModule,
+    TutorsModule,
     StudentsModule,
     LessonsModule,
     InvitesModule,
