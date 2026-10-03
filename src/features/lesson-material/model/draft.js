@@ -6,7 +6,7 @@ let nextId = 1
 const withId = (item) => ({ id: nextId++, ...item })
 
 const EMPTY = {
-  theory: { h: '', p: '', ex: '' },
+  theory: { h: '', p: '', rule: '', ex: '' },
   mistakes: { text: '' },
   homework: { task: '', tag: '', answer: '' },
 }
@@ -14,7 +14,7 @@ const EMPTY = {
 export function toDraft(material) {
   return {
     title: material.title ?? material.topic,
-    theory: material.theory.map((t) => withId({ h: t.h, p: t.p, ex: t.ex ?? '' })),
+    theory: material.theory.map((t) => withId({ h: t.h, p: t.p, rule: t.rule ?? '', ex: t.ex ?? '' })),
     mistakes: material.mistakes.map((text) => withId({ text })),
     example: { ...material.example },
     homework: material.homework.map((h) => withId({ task: h.task, tag: h.tag ?? '', answer: h.answer ?? '' })),
@@ -25,7 +25,7 @@ export function toDraft(material) {
 export function fromDraft(draft) {
   return {
     title: draft.title,
-    theory: draft.theory.map(({ h, p, ex }) => ({ h, p, ex })),
+    theory: draft.theory.map(({ h, p, rule, ex }) => ({ h, p, rule, ex })),
     mistakes: draft.mistakes.map((m) => m.text),
     example: draft.example,
     homework: draft.homework.map(({ task, tag, answer }) => ({ task, tag, answer })),

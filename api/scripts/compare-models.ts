@@ -130,7 +130,7 @@ function renderCell(r: Result): string {
   const c = r.content
   return `<div class="meta">${meta}</div>
     <h4>${esc(c.title ?? '—')}</h4>
-    <h4>Теория</h4>${c.theory.map((t) => `<p><b>${esc(t.h)}.</b> ${esc(t.p)}${t.ex ? `<br><i>${esc(t.ex)}</i>` : ''}</p>`).join('')}
+    <h4>Теория</h4>${c.theory.map((t) => `<p><b>${esc(t.h)}.</b> ${esc(t.p)}${t.rule ? `<br><b>${esc(t.rule)}</b>` : ''}${t.ex ? `<br><i>${esc(t.ex)}</i>` : ''}</p>`).join('')}
     <h4>Ошибки</h4><ul>${c.mistakes.map((m) => `<li>${esc(m)}</li>`).join('')}</ul>
     <h4>Пример</h4><p>${esc(c.example.task)}</p><pre>${esc(c.example.solution)}</pre>
     <h4>Домашка</h4><ol>${c.homework.map((h) => `<li>${h.tag ? `<b>[${esc(h.tag)}]</b> ` : ''}${esc(h.task)}<br><small>Ответ: ${esc(h.answer ?? '—')}</small></li>`).join('')}</ol>

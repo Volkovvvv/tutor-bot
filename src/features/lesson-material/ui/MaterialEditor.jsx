@@ -36,7 +36,14 @@ const TheoryRow = memo(function TheoryRow({ item, dispatch }) {
     <div className={s.row}>
       <div className={s.fields}>
         <Area strong value={item.h} onChange={(h) => set({ h })} placeholder="Заголовок" label="Заголовок блока" />
-        <Area value={item.p} onChange={(p) => set({ p })} placeholder="Правило или формула" label="Текст блока" />
+        <Area value={item.p} onChange={(p) => set({ p })} placeholder="Объяснение простыми словами" label="Объяснение" />
+        <Area
+          strong
+          value={item.rule}
+          onChange={(rule) => set({ rule })}
+          placeholder="Правило или формула (необязательно)"
+          label="Правило"
+        />
         <Area value={item.ex} onChange={(ex) => set({ ex })} placeholder="Мини-пример (необязательно)" label="Мини-пример" />
       </div>
       <Remove label="Удалить блок теории" onClick={() => dispatch({ type: 'remove', list: 'theory', id: item.id })} />

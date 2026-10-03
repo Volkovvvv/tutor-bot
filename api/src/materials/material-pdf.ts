@@ -74,6 +74,17 @@ export function renderMaterialPdf(input: PdfInput): Promise<Buffer> {
     doc.fillColor(C.ink).text(t.h, x, doc.y, { width })
     doc.moveDown(0.15)
     doc.font('body').fontSize(11).fillColor(C.text).text(t.p, x, doc.y, { width, lineGap: 2 })
+    if (t.rule) {
+      // Правило — плашкой: это то, что ученик выучит, остальное — объяснение
+      const rulePad = 9
+      doc.font('body-semi').fontSize(11)
+      const ruleH = doc.heightOfString(t.rule, { width: width - rulePad * 2, lineGap: 2 }) + rulePad * 2 - 2
+      ensure(ruleH + 8)
+      const ruleY = doc.y + 6
+      doc.roundedRect(x, ruleY, width, ruleH, 7).fill(C.soft)
+      doc.fillColor(C.ink).text(t.rule, x + rulePad, ruleY + rulePad, { width: width - rulePad * 2, lineGap: 2 })
+      doc.y = ruleY + ruleH
+    }
     if (t.ex) {
       // Мини-пример — с лаймовой чертой слева, чтобы глаз находил его сразу
       doc.font('body').fontSize(10.5)

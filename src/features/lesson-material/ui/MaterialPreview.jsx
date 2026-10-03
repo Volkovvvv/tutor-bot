@@ -14,6 +14,7 @@ function MaterialPreview({ material }) {
         <div key={i} className={s.block}>
           <div className={s.h}>{block.h}</div>
           <p className={s.p}>{block.p}</p>
+          {block.rule ? <p className={s.rule}>{block.rule}</p> : null}
           {block.ex ? <p className={s.ex}>{block.ex}</p> : null}
         </div>
       ))}

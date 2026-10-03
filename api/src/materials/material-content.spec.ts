@@ -3,7 +3,7 @@ import { renderMaterialPdf } from './material-pdf'
 
 const valid = {
   title: 'Второй закон Ньютона',
-  theory: [{ h: 'Формулировка', p: 'F = m·a.', ex: 'm = 2 кг, a = 3 м/с² → F = 6 Н' }],
+  theory: [{ h: 'Формулировка', p: 'Чем сильнее толкаешь, тем быстрее разгон.', rule: 'F = m·a', ex: 'm = 2 кг, a = 3 м/с² → F = 6 Н' }],
   mistakes: ['Путают массу и вес: вес — это сила.'],
   example: { task: 'm = 2 кг, F = 10 Н. Найди a.', solution: '1) a = F / m.\n2) a = 5 м/с².' },
   homework: [
@@ -40,7 +40,7 @@ describe('parseContent', () => {
     })
     expect(parseContent(raw)).toEqual({
       ...valid,
-      theory: [{ h: 'Ок', p: 'Текст', ex: null }],
+      theory: [{ h: 'Ок', p: 'Текст', rule: null, ex: null }],
       mistakes: [],
       homework: [{ task: 'Задача', tag: null, answer: null }],
     })
@@ -68,7 +68,7 @@ describe('coerceContent', () => {
     }
     expect(coerceContent(old)).toEqual({
       title: null,
-      theory: [{ h: 'Формулировка', p: 'F = m·a.', ex: null }],
+      theory: [{ h: 'Формулировка', p: 'F = m·a.', rule: null, ex: null }],
       mistakes: [],
       example: valid.example,
       homework: [{ task: 'Задача 1', tag: null, answer: null }],

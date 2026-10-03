@@ -32,6 +32,17 @@
   white-space: pre-line;
 }
 
+/* Правило или формула для запоминания — плашкой, как в PDF */
+.rule {
+  margin: 6px 0 0;
+  padding: 8px 10px;
+  border-radius: 8px;
+  background: var(--tip-bg);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
 /* Мини-пример под правилом: лаймовая черта слева, как в PDF */
 .ex {
   margin: 4px 0 0;
