@@ -34,6 +34,9 @@ export function studentFromApi(s) {
     name: s.name,
     // Свободная пометка репетитора: «9 класс · ОГЭ»
     note: s.note ?? null,
+    // Класс (1–11 или null) и цель подготовки — для материалов урока
+    grade: s.grade ?? null,
+    goal: s.goal ?? 'SCHOOL',
     // API отдаёт копейки — UI всегда работал в рублях.
     price: Math.round(s.price / 100),
     tgId: null,
@@ -56,9 +59,14 @@ export function studentFromApi(s) {
   }
 }
 
-export function studentToApi({ name, price }) {
+export function studentToApi({ name, price, grade, goal }) {
   // UI собирает цену в рублях как введённую пользователем строку/число.
-  return { name, price: Math.round(Number(price) * 100) }
+  return {
+    name,
+    price: Math.round(Number(price) * 100),
+    ...(grade ? { grade } : {}),
+    ...(goal ? { goal } : {}),
+  }
 }
 
 export function notifyToApi(notify) {
@@ -116,6 +124,7 @@ export function tutorFromApi(t) {
     telegramName: t.telegramName,
     subjects: t.subjects,
     defaultPrice: t.defaultPrice === null ? null : Math.round(t.defaultPrice / 100),
+    country: t.country ?? 'RU',
     notifyBeforeHours: t.notifyBeforeHours,
     notifyBeforeMinutes: t.notifyBeforeMinutes,
     notifyDebtReminder: t.notifyDebtReminder,

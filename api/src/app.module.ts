@@ -10,6 +10,7 @@ import { validateEnv } from './config/env.validation'
 import { HealthModule } from './health/health.module'
 import { InvitesModule } from './invites/invites.module'
 import { LessonsModule } from './lessons/lessons.module'
+import { MaterialsModule } from './materials/materials.module'
 import { PrismaModule } from './prisma/prisma.module'
 import { RemindersModule } from './reminders/reminders.module'
 import { StudentsModule } from './students/students.module'
@@ -31,6 +32,7 @@ import { TutorsModule } from './tutors/tutors.module'
     TutorsModule,
     StudentsModule,
     LessonsModule,
+    MaterialsModule,
     InvitesModule,
     BotModule,
     RemindersModule,

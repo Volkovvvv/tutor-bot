@@ -1,5 +1,7 @@
 import { studentLessons, upcomingLessons } from '../../../entities/lesson/index.js'
+import { levelLabel } from '../../../entities/student/index.js'
 import { ContactStudent } from '../../../features/contact-student/index.js'
+import { EditStudentLevel } from '../../../features/edit-student-level/index.js'
 import { InviteStudent } from '../../../features/invite-student/index.js'
 import { NotifySettings } from '../../../features/notify-settings/index.js'
 import { dayTitle } from '../../../shared/lib/date.js'
@@ -32,6 +34,7 @@ export default function StudentPage({
   onInvite,
   inviteLink,
   onUpdateNotify,
+  onUpdateStudent,
 }) {
   if (!student) return null
 
@@ -39,6 +42,7 @@ export default function StudentPage({
   const upcoming = upcomingLessons(lessons, student.id)
   // Прошедшие и отменённые — свежие сверху
   const history = own.filter((l) => l.status !== 'planned').reverse()
+  const subtitle = levelLabel(student) ?? student.note
 
   return (
     <Screen>
@@ -48,7 +52,7 @@ export default function StudentPage({
         <Avatar name={student.name} size="large" />
         <div className={s.headText}>
           <PageTitle>{student.name}</PageTitle>
-          {student.note ? <span className={s.note}>{student.note}</span> : null}
+          {subtitle ? <span className={s.note}>{subtitle}</span> : null}
         </div>
       </div>
 
@@ -65,6 +69,8 @@ export default function StudentPage({
         onNotify={onNotify}
         inviteLink={inviteLink}
       />
+
+      <EditStudentLevel student={student} onChange={onUpdateStudent} />
 
       <NotifySettings student={student} onChange={onUpdateNotify} />
 

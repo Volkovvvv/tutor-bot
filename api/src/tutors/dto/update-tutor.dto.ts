@@ -2,6 +2,7 @@ import {
   ArrayMaxSize,
   IsArray,
   IsBoolean,
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -32,6 +33,11 @@ export class UpdateTutorDto {
   @Min(0)
   @Max(MAX_PRICE_KOPECKS)
   defaultPrice?: number | null
+
+  /** Чья школьная программа у учеников. */
+  @IsOptional()
+  @IsIn(['RU', 'BY'])
+  country?: 'RU' | 'BY'
 
   // Пределы — те же, что у настроек конкретного ученика
   // (students/dto/notify-settings.dto.ts): отсюда они туда и копируются.

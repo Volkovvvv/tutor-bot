@@ -2,7 +2,7 @@
 // подставляет заголовок Authorization, разбирает ошибки в единый формат.
 import { getInitData } from './telegram.js'
 
-const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3000/api'
+export const API_URL = import.meta.env?.VITE_API_URL || 'http://localhost:3000/api'
 const TOKEN_KEY = 'tutor-crm:token'
 
 let token = null

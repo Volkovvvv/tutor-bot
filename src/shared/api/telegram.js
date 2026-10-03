@@ -126,6 +126,26 @@ export function shareText(text) {
   }
 }
 
+// Скачать файл по ссылке. В Telegram у webview своей загрузки нет:
+// новые клиенты показывают системный диалог (downloadFile, Bot API 8.0),
+// старые открывают ссылку во внешнем браузере — файл скачивает он.
+export function downloadFile(url, fileName) {
+  if (tg) {
+    if (tg.isVersionAtLeast?.('8.0') && tg.downloadFile) {
+      tg.downloadFile({ url, file_name: fileName })
+    } else {
+      tg.openLink(url)
+    }
+    return
+  }
+  const a = document.createElement('a')
+  a.href = url
+  a.download = fileName
+  document.body.appendChild(a)
+  a.click()
+  document.body.removeChild(a)
+}
+
 // Копирование в буфер: в Mini App clipboard доступен не всегда,
 // поэтому есть запасной путь через скрытый textarea.
 export function copyText(text) {

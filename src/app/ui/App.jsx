@@ -224,6 +224,7 @@ export default function App() {
           onInvite={store.inviteStudent}
           inviteLink={store.inviteLinks.get(view.id)}
           onUpdateNotify={store.updateNotify}
+          onUpdateStudent={store.updateStudent}
         />
       ) : null}
 
@@ -237,6 +238,13 @@ export default function App() {
           onSetStatus={handleSetStatus}
           onTogglePaid={store.togglePaid}
           onDelete={handleDeleteLesson}
+          subjects={store.profile?.subjects ?? []}
+          onAddSubject={(name) => {
+            const mine = store.profile?.subjects ?? []
+            if (!mine.includes(name)) store.updateProfile({ subjects: [...mine, name] })
+          }}
+          country={store.profile?.country ?? 'RU'}
+          onSetCountry={(country) => store.updateProfile({ country })}
         />
       ) : null}
 

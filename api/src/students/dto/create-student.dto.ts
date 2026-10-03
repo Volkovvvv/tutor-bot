@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer'
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -11,6 +12,9 @@ import {
 } from 'class-validator'
 import { MAX_PRICE_KOPECKS } from '../../common/money'
 import { UpdateNotifySettingsDto } from './notify-settings.dto'
+
+export const STUDY_GOALS = ['SCHOOL', 'OGE', 'EGE', 'CE', 'CT'] as const
+export type StudyGoalValue = (typeof STUDY_GOALS)[number]
 
 export class CreateStudentDto {
   @IsString()
@@ -28,6 +32,18 @@ export class CreateStudentDto {
   @IsString()
   @MaxLength(1000)
   note?: string
+
+  /** Класс, 1–11; null — не указан. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(11)
+  grade?: number | null
+
+  /** К чему готовится: под это ИИ собирает материалы урока. */
+  @IsOptional()
+  @IsIn(STUDY_GOALS)
+  goal?: StudyGoalValue
 
   @IsOptional()
   @ValidateNested()

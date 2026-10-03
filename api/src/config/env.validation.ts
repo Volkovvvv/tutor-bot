@@ -68,6 +68,20 @@ class EnvVars {
   @IsString()
   @IsOptional()
   BOT_WEBHOOK_SECRET?: string
+
+  // Без ключа материалы урока собираются из шаблона — интерфейс
+  // работает, но теорию и задачи ИИ не пишет.
+  @IsString()
+  @IsOptional()
+  AI_API_KEY?: string
+
+  @IsString()
+  @IsOptional()
+  AI_BASE_URL?: string
+
+  @IsString()
+  @IsOptional()
+  AI_MODEL?: string
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvVars {

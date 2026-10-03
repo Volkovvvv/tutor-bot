@@ -7,6 +7,7 @@ const TUTOR_SELECT = {
   displayName: true,
   subjects: true,
   defaultPrice: true,
+  country: true,
   notifyBeforeHours: true,
   notifyBeforeMinutes: true,
   notifyDebtReminder: true,
@@ -23,6 +24,7 @@ export interface TutorView {
   telegramName: string
   subjects: string[]
   defaultPrice: number | null
+  country: 'RU' | 'BY'
   notifyBeforeHours: number
   notifyBeforeMinutes: number
   notifyDebtReminder: boolean

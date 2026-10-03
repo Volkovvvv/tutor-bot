@@ -18,6 +18,11 @@ const DATIVE: Record<string, string> = {
   Информатика: 'информатике',
 }
 
+/** «математике» или null для незнакомого предмета. */
+export function subjectDative(subject: string): string | null {
+  return DATIVE[subject] ?? null
+}
+
 /** «по математике и физике» или пустая строка. */
 export function subjectsPhrase(subjects: string[]): string {
   const known = subjects.map((s) => DATIVE[s]).filter(Boolean).slice(0, 2)

@@ -1,4 +1,5 @@
 import {
+  IsIn,
   IsInt,
   IsOptional,
   IsString,
@@ -8,6 +9,7 @@ import {
   MinLength,
 } from 'class-validator'
 import { MAX_PRICE_KOPECKS } from '../../common/money'
+import { STUDY_GOALS, type StudyGoalValue } from './create-student.dto'
 
 /**
  * Обновление карточки. Настройки уведомлений меняются отдельным
@@ -33,4 +35,15 @@ export class UpdateStudentDto {
   @IsString()
   @MaxLength(1000)
   note?: string
+
+  /** Класс, 1–11; null — сбросить. */
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(11)
+  grade?: number | null
+
+  @IsOptional()
+  @IsIn(STUDY_GOALS)
+  goal?: StudyGoalValue
 }

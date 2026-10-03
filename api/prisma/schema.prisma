@@ -56,6 +56,9 @@ model Tutor {
   subjects     String[] @default([])
   // Цена занятия, которую форма нового ученика подставляет сама, в копейках.
   defaultPrice Int?
+  // Чья школьная программа у учеников: от неё зависят терминология
+  // и формат заданий в материалах урока.
+  country      Country  @default(RU)
 
   // Напоминания для новых учеников — копируются в NotifySettings
   // при создании карточки. Смысл полей тот же, что там.
@@ -69,8 +72,9 @@ model Tutor {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  students Student[]
-  lessons  Lesson[]
+  students  Student[]
+  lessons   Lesson[]
+  materials LessonMaterial[]
 
   @@map("tutors")
 }
@@ -97,6 +101,9 @@ model Student {
   // копируется в Lesson.price — см. комментарий там.
   price        Int
   note         String?
+  // Класс (1–11) и цель занятий — под них ИИ собирает материалы урока.
+  grade        Int?
+  goal         StudyGoal     @default(SCHOOL)
   source       StudentSource @default(MANUAL)
   inviteStatus InviteStatus  @default(NONE)
 
@@ -174,6 +181,7 @@ model Lesson {
   updatedAt DateTime @updatedAt
 
   reminders Reminder[]
+  material  LessonMaterial?
 
   // Расписание кабинета за период.
   @@index([tutorId, startsAt])
@@ -182,6 +190,48 @@ model Lesson {
   // Долги ученика: прошедшие занятия без оплаты.
   @@index([studentId, status, paidAt])
   @@map("lessons")
+}
+
+enum Country {
+  RU
+  BY
+}
+
+// К чему готовится ученик. SCHOOL — без экзамена, по школьной программе.
+enum StudyGoal {
+  SCHOOL
+  OGE
+  EGE
+  CE
+  CT
+}
+
+// ─── Материалы урока ─────────────────────────────────────────────────────
+
+// Теория, разбор примера и домашка после урока, собранные ИИ.
+// Одна на занятие: «Изменить тему» удаляет её и собирает заново.
+model LessonMaterial {
+  id       String @id @default(uuid())
+  lessonId String @unique
+  lesson   Lesson @relation(fields: [lessonId], references: [id], onDelete: Cascade)
+
+  // Денормализация, как у Lesson: список материалов кабинета без join'а.
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  subject String
+  topic   String
+  // Форма — MaterialContent в materials/material-content.ts.
+  // JSON, а не таблицы: структуру задаёт промпт, и она будет меняться
+  // вместе с ним — миграция на каждую правку промпта не окупается.
+  content Json
+  // Какая модель собрала; "template" — заглушка без ключа ИИ.
+  model   String
+
+  createdAt DateTime @default(now())
+
+  @@index([tutorId])
+  @@map("lesson_materials")
 }
 
 // ─── Напоминания ─────────────────────────────────────────────────────────

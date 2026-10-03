@@ -19,6 +19,8 @@ const STUDENT_SELECT = {
   name: true,
   price: true,
   note: true,
+  grade: true,
+  goal: true,
   source: true,
   inviteStatus: true,
   archivedAt: true,
@@ -88,6 +90,8 @@ export class StudentsService {
         name: dto.name.trim(),
         price: dto.price,
         note: dto.note?.trim() ?? null,
+        grade: dto.grade ?? null,
+        ...(dto.goal ? { goal: dto.goal } : {}),
         // Настройки создаём всегда: планировщику проще читать строку
         // с дефолтами, чем обрабатывать их отсутствие.
         notify: { create: notify },
@@ -105,6 +109,8 @@ export class StudentsService {
         ...(dto.name !== undefined ? { name: dto.name.trim() } : {}),
         ...(dto.price !== undefined ? { price: dto.price } : {}),
         ...(dto.note !== undefined ? { note: dto.note?.trim() ?? null } : {}),
+        ...(dto.grade !== undefined ? { grade: dto.grade } : {}),
+        ...(dto.goal ? { goal: dto.goal } : {}),
       },
       select: STUDENT_SELECT,
     })

@@ -226,6 +226,17 @@ export function useStore() {
       })
   }, [])
 
+  // Класс и цель ученика. Патч уходит на сервер как есть: поля те же.
+  const updateStudent = useCallback((id, patch) => {
+    const prev = students
+    setStudents((list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+    api.patch(`/students/${id}`, patch).catch((e) => {
+      setStudents(prev)
+      reportError(e.message)
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [students])
+
   const updateNotify = useCallback((id, notify) => {
     const prev = students
     setStudents((list) => list.map((s) => (s.id === id ? { ...s, notify } : s)))
@@ -249,6 +260,7 @@ export function useStore() {
     addStudent,
     createAndInvite,
     inviteStudent,
+    updateStudent,
     updateNotify,
     addLesson,
     setStatus,

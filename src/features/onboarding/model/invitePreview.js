@@ -2,7 +2,7 @@
 // Настоящий текст собирает сервер (api/src/invites/invite-message.ts) —
 // меняя формулировку там, поправьте и здесь.
 
-export const SUBJECTS = ['Математика', 'Физика', 'Русский язык', 'Английский', 'Химия', 'Информатика']
+export { SUBJECTS } from '../../../shared/lib/subjects.js'
 
 const DATIVE = {
   Математика: 'математике',
