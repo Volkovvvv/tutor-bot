@@ -14,7 +14,8 @@
     "test": "jest",
     "test:watch": "jest --watch",
     "postinstall": "prisma generate",
-    "compare-models": "ts-node --transpile-only scripts/compare-models.ts"
+    "compare-models": "ts-node --transpile-only scripts/compare-models.ts",
+    "eval-models": "ts-node --transpile-only scripts/eval-models.ts"
   },
   "keywords": [],
   "author": "",

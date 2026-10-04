@@ -1,5 +1,5 @@
 import { IsBoolean, IsIn, IsObject, IsOptional, IsString, MaxLength, MinLength } from 'class-validator'
-import { HOMEWORK_COUNTS } from '../material-content'
+import { HOMEWORK_COUNTS, WISHES_MAX } from '../material-content'
 
 export class GenerateMaterialDto {
   @IsString()
@@ -11,6 +11,12 @@ export class GenerateMaterialDto {
   @MinLength(2, { message: 'Напишите тему урока' })
   @MaxLength(200)
   topic!: string
+
+  /** Пожелания репетитора к материалу свободным текстом: уходят в промпт. */
+  @IsOptional()
+  @IsString()
+  @MaxLength(WISHES_MAX, { message: `Пожелания — не длиннее ${WISHES_MAX} символов` })
+  wishes?: string
 
   /** Сколько заданий в домашке; по умолчанию 6. */
   @IsOptional()

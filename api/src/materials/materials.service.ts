@@ -122,6 +122,7 @@ export class MaterialsService {
       goal: lesson.student.goal,
       country: lesson.tutor.country,
       homeworkCount: dto.homeworkCount ?? DEFAULT_HOMEWORK_COUNT,
+      wishes: dto.wishes?.trim() || null,
     })
 
     const data = {

@@ -13,6 +13,7 @@ import {
   Segmented,
   Select,
   Stack,
+  Textarea,
 } from '../../../shared/ui/index.js'
 import MaterialEditor from './MaterialEditor.jsx'
 import MaterialPreview from './MaterialPreview.jsx'
@@ -59,6 +60,8 @@ export default function LessonMaterial({
   const [customSubject, setCustomSubject] = useState('')
   const [topic, setTopic] = useState('')
   const [count, setCount] = useState(6)
+  // Пожелания к материалу: уходят в запрос к ИИ, на сервере не хранятся
+  const [wishes, setWishes] = useState('')
   // Правка текста готового материала (не путать с editing — сменой темы)
   const [revising, setRevising] = useState(false)
   // 'generate' | 'save' | 'send' | 'pdf' | 'pdf-answers' | null — что сейчас выполняется
@@ -100,6 +103,7 @@ export default function LessonMaterial({
         subject: subjectName,
         topic: topic.trim(),
         homeworkCount: count,
+        ...(wishes.trim() ? { wishes: wishes.trim() } : {}),
       })
       setMaterial(next)
       setEditing(false)
@@ -196,6 +200,14 @@ export default function LessonMaterial({
               onChange={(e) => setTopic(e.target.value)}
               placeholder="Например, теорема Виета"
               maxLength={200}
+            />
+          </Field>
+          <Field label="Пожелания · необязательно">
+            <Textarea
+              value={wishes}
+              onChange={(e) => setWishes(e.target.value)}
+              placeholder="Например: больше текстовых задач, добавь неполные уравнения, без дробей"
+              maxLength={500}
             />
           </Field>
           <FieldGroup label="Домашнее задание">

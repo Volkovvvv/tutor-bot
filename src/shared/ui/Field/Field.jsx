@@ -25,6 +25,10 @@ export function Input({ className, ...props }) {
   return <input className={cx(s.control, className)} {...props} />
 }
 
+export function Textarea({ className, rows = 3, ...props }) {
+  return <textarea className={cx(s.control, s.textarea, className)} rows={rows} {...props} />
+}
+
 export function Select({ className, ...props }) {
   return <select className={cx(s.control, s.select, className)} {...props} />
 }
