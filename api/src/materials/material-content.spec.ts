@@ -114,6 +114,13 @@ describe('buildMessages', () => {
     expect(buildMessages({ ...input, wishes: 'я'.repeat(900) })[1].content).toContain(`«${'я'.repeat(500)}»`)
   })
 
+  it('в младших классах просит записывать правила словами', () => {
+    expect(buildMessages({ ...input, grade: 5 })[0].content).toContain('правила действий записывай словами')
+    expect(buildMessages({ ...input, grade: 6 })[0].content).toContain('правила действий записывай словами')
+    expect(buildMessages({ ...input, grade: 7 })[0].content).not.toContain('правила действий записывай словами')
+    expect(buildMessages({ ...input, grade: null })[0].content).not.toContain('правила действий записывай словами')
+  })
+
   it('без экзамена программа — по стране репетитора', () => {
     const [system, user] = buildMessages({ ...input, country: 'BY' })
     expect(user.content).toContain('белорусская школа')
