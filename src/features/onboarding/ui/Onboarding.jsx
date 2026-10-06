@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { shareText, tg } from '../../../shared/api/telegram.js'
 import { cx } from '../../../shared/lib/cx.js'
 import {
@@ -13,13 +13,14 @@ import {
   Stack,
   Switch,
 } from '../../../shared/ui/index.js'
+import { demoMaterial } from '../model/demoMaterial.js'
 import { invitePreview, SUBJECTS } from '../model/invitePreview.js'
 import s from './Onboarding.module.css'
 
 const FEATURES = [
-  ['01', 'Напоминания', 'Бот сам напишет ученику за день и за час до занятия.'],
-  ['02', 'Календарь и деньги', 'Расписание по часам и заработок за месяц.'],
-  ['03', 'Всё в Telegram', 'Приложение открывается из чата, ученикам ничего ставить не нужно.'],
+  ['01', 'Конспект в PDF', 'После урока ИИ соберёт теорию и домашку в фирменный PDF.'],
+  ['02', 'Напоминания', 'Бот сам напишет ученику за день и за час до занятия.'],
+  ['03', 'Календарь и деньги', 'Расписание по часам и заработок за месяц.'],
 ]
 
 const REMINDERS = [
@@ -28,13 +29,20 @@ const REMINDERS = [
   ['notifyDebtReminder', 'О долге', 'Если урок не оплачен к вечеру', true],
 ]
 
-const STEPS = 4
+const STEPS = 5
+
+// Шаг «Домашка за минуту»: лист собирается на глазах, по разделу за такт.
+// Такт 0 — ещё не запускали, 4 — готово; подпись — что «пишется» сейчас.
+const DEMO_TICK_MS = 700
+const DEMO_DONE = 4
+const DEMO_STATUS = ['', 'Пишу теорию…', 'Разбираю пример…', 'Подбираю домашку…', 'Готово']
+const DEMO_PLAN = ['Теория по теме', 'Разбор примера', '4 задачи на дом', 'Вёрстка PDF']
 
 /**
- * Знакомство с приложением при первом входе: предметы и имя,
- * напоминания по умолчанию, первый ученик. Каждый шаг сохраняется
- * на сервер перед переходом дальше — закрыв приложение на середине,
- * репетитор продолжит с заполненными полями.
+ * Знакомство с приложением при первом входе: предметы, пример PDF
+ * и подпись на нём, напоминания по умолчанию, первый ученик. Каждый шаг
+ * сохраняется на сервер перед переходом дальше — закрыв приложение
+ * на середине, репетитор продолжит с заполненными полями.
  */
 export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
   const [step, setStep] = useState(0)
@@ -49,6 +57,28 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
     notifyDebtReminder: profile.notifyDebtReminder,
   })
   const [studentName, setStudentName] = useState('')
+  const [demoTick, setDemoTick] = useState(0)
+  const demoTimer = useRef(null)
+
+  const runDemo = () => {
+    clearInterval(demoTimer.current)
+    setDemoTick(1)
+    demoTimer.current = setInterval(() => {
+      setDemoTick((tick) => {
+        if (tick + 1 >= DEMO_DONE) clearInterval(demoTimer.current)
+        return Math.min(tick + 1, DEMO_DONE)
+      })
+    }, DEMO_TICK_MS)
+  }
+
+  // Пример начинает собираться сам, как только репетитор дошёл до шага
+  useEffect(() => {
+    if (step === 2 && demoTick === 0) runDemo()
+    // demoTick не в зависимостях: запускаем по приходу на шаг, а не по тактам
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [step])
+
+  useEffect(() => () => clearInterval(demoTimer.current), [])
 
   useEffect(() => {
     window.scrollTo(0, 0)
@@ -83,8 +113,15 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
   const toggleSubject = (subject) =>
     setSubjects((list) => (list.includes(subject) ? list.filter((x) => x !== subject) : [...list, subject]))
 
-  const profileValid = name.trim().length > 0 && Number(price) > 0
-  const finish = () => save({ onboarded: true })
+  const finish = (patch) => save({ ...patch, onboarded: true })
+
+  // Подпись сохраняем, только если она есть: пустую сервер не примет,
+  // а без неё лист подпишется именем из Telegram
+  const leaveDemo = () => {
+    clearInterval(demoTimer.current)
+    setDemoTick(DEMO_DONE)
+    return name.trim() ? save({ displayName: name.trim() }, 3) : setStep(3)
+  }
 
   const invite = async () => {
     setBusy(true)
@@ -95,18 +132,19 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
     }
     const shared = shareText(result.message)
     onNotify(shared === 'copied' ? 'Приглашение скопировано — отправьте его ученику' : 'Выберите чат ученика')
-    await finish()
+    // Цена первого ученика — цена по умолчанию для следующих
+    await finish({ defaultPrice: Number(price) })
     setBusy(false)
   }
 
   const primary = [
     { label: 'Начать', onClick: () => setStep(1), disabled: false },
-    {
-      label: 'Дальше',
-      disabled: !profileValid,
-      onClick: () =>
-        save({ displayName: name.trim(), subjects, defaultPrice: Number(price) }, 2),
-    },
+    { label: 'Дальше', disabled: false, onClick: () => save({ subjects }, 2) },
+    demoTick === 0
+      ? { label: 'Сгенерировать', disabled: false, onClick: runDemo }
+      : demoTick < DEMO_DONE
+        ? { label: 'Генерирую…', disabled: true, onClick: () => {} }
+        : { label: 'Дальше', disabled: false, onClick: leaveDemo },
     {
       label: 'Дальше',
       disabled: false,
@@ -117,11 +155,13 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
             notifyBeforeMinutes: reminders.notifyBeforeMinutes ? 60 : 0,
             notifyDebtReminder: reminders.notifyDebtReminder,
           },
-          3
+          4
         ),
     },
-    { label: 'Пригласить', disabled: !studentName.trim(), onClick: invite },
+    { label: 'Пригласить', disabled: !studentName.trim() || !(Number(price) > 0), onClick: invite },
   ][step]
+
+  const demo = demoMaterial(subjects)
 
   return (
     <div className={s.flow}>
@@ -156,10 +196,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
 
       {step === 1 ? (
         <>
-          <Stack gap={8}>
-            <PageTitle>Что вы преподаёте?</PageTitle>
-            <p className={s.text}>Предметы попадут в приглашения ученикам.</p>
-          </Stack>
+          <PageTitle>Что вы преподаёте?</PageTitle>
           <div className={s.chips}>
             {SUBJECTS.map((subject) => (
               <button
@@ -173,21 +210,76 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
               </button>
             ))}
           </div>
-          <Field label="Как вас зовут ученики">
-            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="Анна Сергеевна" />
-          </Field>
-          <Field label="Цена занятия, ₽">
-            <Input
-              inputMode="numeric"
-              value={price}
-              onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
-              placeholder="1500"
-            />
-          </Field>
         </>
       ) : null}
 
       {step === 2 ? (
+        <>
+          <Stack gap={8}>
+            <PageTitle>Домашка за минуту</PageTitle>
+            <p className={s.text}>
+              После урока впишите тему. ИИ соберёт теорию, разбор примера и задачи в готовый
+              брендированный под вас PDF.
+            </p>
+          </Stack>
+          <Field label="Подпишем лист вашим именем">
+            <Input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="Например: Анна Сергеевна"
+              maxLength={100}
+            />
+          </Field>
+          <div className={s.topicRow}>
+            <div className={s.topicMain}>
+              <span className={s.topicLabel}>Тема урока · {demo.subject}</span>
+              <span className={s.topicName}>{demo.topic}</span>
+            </div>
+            <span className={s.topicStatus} aria-live="polite">{DEMO_STATUS[demoTick]}</span>
+          </div>
+          {demoTick === 0 ? (
+            <div className={s.plan}>
+              {DEMO_PLAN.map((label, i) => (
+                <div key={label} className={s.planRow}>
+                  <span className={s.planNum}>{i + 1}</span>
+                  <span>{label}</span>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <div className={s.sheet}>
+              <div className={s.sheetHead}>
+                <span className={s.sheetTopic}>{demo.topic}</span>
+                <span className={s.sheetTutor}>{name.trim() || 'Репетитор'}</span>
+              </div>
+              <div className={cx(s.part, demoTick > 1 && s.shown)}>
+                <span className={s.partLabel}>Теория</span>
+                {demo.theory.map((t) => (
+                  <div key={t.h} className={s.line}>
+                    <b>{t.h}.</b> {t.p}
+                  </div>
+                ))}
+              </div>
+              <div className={cx(s.part, s.exampleBox, demoTick > 2 && s.shown)}>
+                <span className={s.partLabel}>Пример</span>
+                <div className={s.line}>{demo.example.task}</div>
+                <div className={cx(s.line, s.solution)}>{demo.example.solution}</div>
+              </div>
+              <div className={cx(s.part, demoTick > 3 && s.shown)}>
+                <span className={s.partLabel}>Домашнее задание</span>
+                {demo.homework.map((task, i) => (
+                  <div key={task} className={s.task}>
+                    <span className={s.taskNum}>{i + 1}</span>
+                    <span>{task}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
+
+      {step === 3 ? (
         <>
           <Stack gap={8}>
             <PageTitle>Напоминания</PageTitle>
@@ -216,7 +308,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
         </>
       ) : null}
 
-      {step === 3 ? (
+      {step === 4 ? (
         <>
           <Stack gap={8}>
             <PageTitle>Пригласите первого ученика</PageTitle>
@@ -238,6 +330,14 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
               placeholder="Например, Аня Петрова"
             />
           </Field>
+          <Field label="Цена занятия, ₽">
+            <Input
+              inputMode="numeric"
+              value={price}
+              onChange={(e) => setPrice(e.target.value.replace(/\D/g, ''))}
+              placeholder="1500"
+            />
+          </Field>
         </>
       ) : null}
 
@@ -245,8 +345,13 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
         <Button onClick={primary.onClick} disabled={primary.disabled || busy}>
           {busy ? 'Сохраняем…' : primary.label}
         </Button>
-        {step === 3 ? (
-          <Button variant="secondary" onClick={finish} disabled={busy}>
+        {step === 2 && demoTick < DEMO_DONE ? (
+          <button type="button" className={s.skip} onClick={leaveDemo} disabled={busy}>
+            Пропустить
+          </button>
+        ) : null}
+        {step === 4 ? (
+          <Button variant="secondary" onClick={() => finish()} disabled={busy}>
             Сделаю позже
           </Button>
         ) : null}

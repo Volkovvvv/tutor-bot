@@ -66,3 +66,75 @@
   font-size: 12.5px;
   font-weight: 500;
 }
+
+/* ─── Первый шаг: учеников ещё нет ─── */
+.first {
+  position: relative;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 20px 18px 18px;
+  border-radius: 22px;
+  background: var(--card);
+  box-shadow: var(--shadow-cta);
+}
+
+/* Декоративный плюс в углу карточки */
+.first::before {
+  content: '+';
+  position: absolute;
+  right: 14px;
+  top: -22px;
+  font-family: var(--font-display);
+  font-weight: 500;
+  font-size: 110px;
+  color: rgba(143, 129, 207, 0.14);
+  transform: rotate(12deg);
+  pointer-events: none;
+}
+
+.firstTitle {
+  position: relative;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 30px;
+  line-height: 1.05;
+  text-transform: uppercase;
+}
+
+.firstSteps {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.firstStep {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  font-size: 14.5px;
+  font-weight: 500;
+  line-height: 1.4;
+  text-wrap: pretty;
+}
+
+.firstNum {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 8px;
+  background: var(--card-soft);
+  color: var(--link);
+  font-family: var(--font-display);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+/* Вторая кнопка на белой карточке: белая на белом не видна */
+button.firstManual {
+  background: var(--card-soft);
+  box-shadow: none;
+}

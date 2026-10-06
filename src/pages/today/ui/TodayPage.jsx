@@ -28,7 +28,14 @@ function botLine(student) {
     : { ok: false, text: 'Напоминания для ученика выключены' }
 }
 
-export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson }) {
+// С чего начать, пока учеников нет
+const FIRST_STEPS = [
+  'Отправьте ученику ссылку-приглашение.',
+  'Он нажмёт «Начать» в боте, и напоминания пойдут сами.',
+  'Добавьте занятие в календарь, и оно появится здесь.',
+]
+
+export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson, onInvite, onAddStudent }) {
   const now = useNow()
   const studentById = indexById(students)
   const today = lessonsOn(lessons, now.date)
@@ -37,6 +44,32 @@ export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson
   const sum = active.reduce((acc, l) => acc + lessonPrice(l, studentById.get(l.studentId)), 0)
   const nextStudent = next ? studentById.get(next.studentId) : null
   const bot = nextStudent ? botLine(nextStudent) : null
+
+  // Без учеников расписание и счётчики пусты и ничего не подсказывают —
+  // вместо них один понятный первый шаг
+  if (students.length === 0) {
+    return (
+      <Screen>
+        <PageTitle subtitle={dayTitle(now.date)}>Сегодня</PageTitle>
+        <div className={s.first}>
+          <Pill>Первый шаг</Pill>
+          <div className={s.firstTitle}>Добавьте первого ученика</div>
+          <div className={s.firstSteps}>
+            {FIRST_STEPS.map((text, i) => (
+              <div key={text} className={s.firstStep}>
+                <span className={s.firstNum}>{i + 1}</span>
+                <span>{text}</span>
+              </div>
+            ))}
+          </div>
+          <Button onClick={onInvite}>Пригласить ученика</Button>
+          <Button className={s.firstManual} variant="secondary" onClick={onAddStudent}>
+            + Добавить вручную
+          </Button>
+        </div>
+      </Screen>
+    )
+  }
 
   return (
     <Screen>
