@@ -2,9 +2,9 @@ import { cx } from '../../lib/cx.js'
 import s from './Segmented.module.css'
 
 // Переключатель «один из нескольких» в одну строку. options: [{ value, label }]
-export default function Segmented({ options, value, onChange, label }) {
+export default function Segmented({ options, value, onChange, label, className }) {
   return (
-    <div className={s.group} role="radiogroup" aria-label={label}>
+    <div className={cx(s.group, className)} role="radiogroup" aria-label={label}>
       {options.map((o) => (
         <button
           key={o.value}

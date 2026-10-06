@@ -1,8 +1,9 @@
+import { useState } from 'react'
 import { lessonEnd, lessonPrice } from '../../../entities/lesson/index.js'
 import { levelLabel } from '../../../entities/student/index.js'
 import { EditLessonStatus } from '../../../features/edit-lesson-status/index.js'
 import { LessonMaterial } from '../../../features/lesson-material/index.js'
-import { dayTitle } from '../../../shared/lib/date.js'
+import { dayMonth, dayTitle } from '../../../shared/lib/date.js'
 import { formatMoney } from '../../../shared/lib/format.js'
 import {
   Actions,
@@ -13,6 +14,7 @@ import {
   PageTitle,
   Pill,
   Screen,
+  Sheet,
   Switch,
 } from '../../../shared/ui/index.js'
 import s from './LessonPage.module.css'
@@ -30,7 +32,10 @@ export default function LessonPage({
   onAddSubject,
   country,
   onSetCountry,
+  tutorName,
 }) {
+  // Удаление необратимо и уносит материалы урока — сначала спрашиваем
+  const [confirming, setConfirming] = useState(false)
   if (!lesson) return null
 
   const name = student?.name ?? 'Удалённый ученик'
@@ -70,11 +75,25 @@ export default function LessonPage({
         country={country}
         onSetCountry={onSetCountry}
         onOpenStudent={onOpenStudent}
+        tutorName={tutorName}
+        date={`${dayMonth(lesson.date)} ${lesson.date.slice(0, 4)}`}
+        onDelete={() => setConfirming(true)}
       />
 
       <Actions>
-        <Button variant="danger" onClick={() => onDelete(lesson.id)}>Удалить занятие</Button>
+        <Button variant="danger" onClick={() => setConfirming(true)}>Удалить занятие</Button>
       </Actions>
+
+      {confirming ? (
+        <Sheet
+          title="Удалить занятие?"
+          subtitle={`${name}, ${dayTitle(lesson.date).toLowerCase()}, ${lesson.time}. Занятие исчезнет из расписания вместе с материалами урока. Вернуть его не получится.`}
+          onClose={() => setConfirming(false)}
+        >
+          <Button variant="danger" className={s.confirm} onClick={() => onDelete(lesson.id)}>Удалить</Button>
+          <Button variant="secondary" onClick={() => setConfirming(false)}>Не удалять</Button>
+        </Sheet>
+      ) : null}
     </Screen>
   )
 }

@@ -12,3 +12,11 @@
   text-align: left;
   cursor: pointer;
 }
+
+/* Подтверждение удаления: на светлой шторке стеклянная danger-кнопка
+   не видна, поэтому здесь она залита. button — чтобы перебить .danger */
+button.confirm {
+  background: var(--danger);
+  color: #fff;
+  box-shadow: 0 10px 22px rgba(179, 38, 30, 0.28);
+}

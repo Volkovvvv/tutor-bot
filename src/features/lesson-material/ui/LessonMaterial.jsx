@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { levelLabel } from '../../../entities/student/index.js'
 import { api, API_URL } from '../../../shared/api/client.js'
 import { downloadFile } from '../../../shared/api/telegram.js'
+import { cx } from '../../../shared/lib/cx.js'
 import { SUBJECTS } from '../../../shared/lib/subjects.js'
 import {
   Button,
@@ -12,9 +13,9 @@ import {
   Section,
   Segmented,
   Select,
-  Stack,
   Textarea,
 } from '../../../shared/ui/index.js'
+import MaterialActions from './MaterialActions.jsx'
 import MaterialEditor from './MaterialEditor.jsx'
 import MaterialPreview from './MaterialPreview.jsx'
 import s from './LessonMaterial.module.css'
@@ -31,6 +32,22 @@ const COUNT_OPTIONS = [
   { value: 6, label: 'Обычно · 6' },
   { value: 10, label: 'Много · 10' },
 ]
+
+// Что показать, пока ИИ пишет. Сервер шагов не сообщает — это один запрос
+// на 20–50 секунд, поэтому шаги идут по времени, а последний ждёт ответа.
+const STEPS = ['Пишу теорию', 'Разбираю пример', 'Подбираю домашку', 'Верстаю PDF']
+const STEP_AT_MS = [7000, 16000, 26000]
+
+// Сколько ждать между запросами, пока сервер проверяет ответы
+const CHECK_POLL_MS = 5000
+
+// О проверке ответов говорим, только когда она что-то нашла: «расхождений нет»
+// репетитор прочтёт как «ответы верные», а этого проверка не обещает
+function checkNote(material) {
+  const doubts = material.homework.filter((h) => h.doubt).length + (material.example.doubt ? 1 : 0)
+  if (doubts === 0) return null
+  return `Проверка получила другой результат в ${doubts} ${doubts === 1 ? 'месте' : 'местах'} — они отмечены ниже.`
+}
 
 const COUNTRY_OPTIONS = [
   { value: 'RU', label: 'Россия' },
@@ -51,6 +68,10 @@ export default function LessonMaterial({
   country,
   onSetCountry,
   onOpenStudent,
+  // Подпись и дата на листе — как в самом PDF
+  tutorName,
+  date,
+  onDelete,
 }) {
   const [material, setMaterial] = useState(null)
   const [loaded, setLoaded] = useState(false)
@@ -67,6 +88,8 @@ export default function LessonMaterial({
   // 'generate' | 'save' | 'send' | 'pdf' | 'pdf-answers' | null — что сейчас выполняется
   const [busy, setBusy] = useState(null)
   const [sent, setSent] = useState(false)
+  // Какой шаг показывать, пока ИИ пишет
+  const [stage, setStage] = useState(0)
 
   useEffect(() => {
     let alive = true
@@ -88,6 +111,35 @@ export default function LessonMaterial({
       alive = false
     }
   }, [lessonId])
+
+  // Проверка ответов идёт на сервере после сборки — ждём её итог
+  const checking = material?.check === 'pending'
+  useEffect(() => {
+    if (!checking) return undefined
+    let alive = true
+    const timer = setInterval(() => {
+      api
+        .get('/materials')
+        .then((list) => {
+          const next = list.find((m) => m.lessonId === lessonId)
+          // Только итог проверки: текст репетитор мог уже открыть на правку
+          if (alive && next && next.check !== 'pending') setMaterial(next)
+        })
+        .catch(() => {})
+    }, CHECK_POLL_MS)
+    return () => {
+      alive = false
+      clearInterval(timer)
+    }
+  }, [checking, lessonId])
+
+  const generating = busy === 'generate'
+  useEffect(() => {
+    if (!generating) return undefined
+    setStage(0)
+    const timers = STEP_AT_MS.map((ms, i) => setTimeout(() => setStage(i + 1), ms))
+    return () => timers.forEach(clearTimeout)
+  }, [generating])
 
   const choices = subjectChoices(subjects)
   const subjectName = subject === OTHER ? customSubject.trim() : subject
@@ -173,11 +225,23 @@ export default function LessonMaterial({
   const hasAnswers = material ? material.homework.some((h) => h.answer) : false
 
   return (
-    <Section title="Материалы к уроку">
-      {showForm ? (
-        <Stack>
+    <Section title="Материалы урока" aside={<span className={s.ai}>ИИ</span>}>
+      {busy === 'generate' ? (
+        <div className={s.card} role="status">
+          <span className={s.genTopic}>«{topic.trim()}»</span>
+          {STEPS.map((label, i) => (
+            <div key={label} className={cx(s.step, i > stage && s.wait)}>
+              <span className={s.mark}>
+                {i < stage ? <span className={s.check}>✓</span> : i === stage ? <span className={s.spinner} /> : <span className={s.ring} />}
+              </span>
+              <span>{label}</span>
+            </div>
+          ))}
+        </div>
+      ) : showForm ? (
+        <div className={s.card}>
           <Field label="Предмет">
-            <Select value={subject} onChange={(e) => setSubject(e.target.value)}>
+            <Select className={s.soft} value={subject} onChange={(e) => setSubject(e.target.value)}>
               {choices.map((name) => (
                 <option key={name} value={name}>{name}</option>
               ))}
@@ -186,6 +250,7 @@ export default function LessonMaterial({
           </Field>
           {subject === OTHER ? (
             <Input
+              className={s.soft}
               value={customSubject}
               onChange={(e) => setCustomSubject(e.target.value)}
               placeholder="Например, Биология"
@@ -195,27 +260,31 @@ export default function LessonMaterial({
             />
           ) : null}
           <Field label="Тема урока">
-            <Input
+            <Textarea
+              className={cx(s.soft, s.topicInput)}
+              rows={2}
               value={topic}
               onChange={(e) => setTopic(e.target.value)}
-              placeholder="Например, теорема Виета"
+              placeholder="Например: теорема Виета"
               maxLength={200}
             />
           </Field>
           <Field label="Пожелания · необязательно">
             <Textarea
+              className={cx(s.soft, s.wishes)}
+              rows={2}
               value={wishes}
               onChange={(e) => setWishes(e.target.value)}
-              placeholder="Например: больше текстовых задач, добавь неполные уравнения, без дробей"
+              placeholder="Больше текстовых задач, без дробей"
               maxLength={500}
             />
           </Field>
           <FieldGroup label="Домашнее задание">
-            <Segmented label="Сколько заданий" options={COUNT_OPTIONS} value={count} onChange={setCount} />
+            <Segmented className={s.softGroup} label="Сколько заданий" options={COUNT_OPTIONS} value={count} onChange={setCount} />
           </FieldGroup>
           {noExam ? (
             <FieldGroup label="Школьная программа">
-              <Segmented label="Страна" options={COUNTRY_OPTIONS} value={country} onChange={onSetCountry} />
+              <Segmented className={s.softGroup} label="Страна" options={COUNTRY_OPTIONS} value={country} onChange={onSetCountry} />
             </FieldGroup>
           ) : null}
 
@@ -227,15 +296,15 @@ export default function LessonMaterial({
             </button>
           ) : null}
 
-          <Button onClick={generate} disabled={!canGenerate}>
-            {busy === 'generate' ? 'ИИ пишет… до минуты' : 'Собрать конспект и домашку'}
-          </Button>
+          <span className={s.hint}>
+            ИИ напишет короткую теорию, разберёт пример и подберёт {count} {count === 4 ? 'задачи' : 'задач'} на дом.
+            PDF оформится в вашем стиле, с вашим именем.
+          </span>
+          <Button onClick={generate} disabled={!canGenerate}>Собрать PDF</Button>
           {editing ? (
-            <Button variant="secondary" onClick={() => setEditing(false)} disabled={busy === 'generate'}>
-              Отмена
-            </Button>
+            <Button variant="secondary" onClick={() => setEditing(false)}>Отмена</Button>
           ) : null}
-        </Stack>
+        </div>
       ) : revising ? (
         <MaterialEditor
           material={material}
@@ -244,33 +313,31 @@ export default function LessonMaterial({
           onCancel={() => setRevising(false)}
         />
       ) : (
-        <Stack>
+        <>
           {material.isTemplate ? (
             <Note>Это заготовка без ИИ: ключ ИИ на сервере не задан.</Note>
           ) : (
             <Note>Проверьте текст перед отправкой: ИИ может ошибаться в расчётах и ответах.</Note>
           )}
-          <MaterialPreview material={material} />
-
-          <Button onClick={() => download(false)} disabled={!!busy}>
-            {busy === 'pdf' ? 'Готовлю файл…' : 'Скачать PDF для ученика'}
-          </Button>
-          {hasAnswers ? (
-            <Button variant="secondary" onClick={() => download(true)} disabled={!!busy}>
-              {busy === 'pdf-answers' ? 'Готовлю файл…' : 'Скачать PDF с ответами'}
-            </Button>
-          ) : null}
-          <Button variant="secondary" onClick={send} disabled={!!busy}>
-            {busy === 'send' ? 'Отправляю…' : sent ? 'Отправлено — отправить ещё раз' : 'Прислать PDF в Telegram'}
-          </Button>
+          {checkNote(material) ? <Note>{checkNote(material)}</Note> : null}
+          <MaterialPreview
+            material={material}
+            pill={[material.subject, level].filter(Boolean).join(' · ')}
+            meta={[student?.name, date].filter(Boolean).join(' · ')}
+            footer={tutorName ? `${tutorName} · репетитор` : 'Репетитор'}
+          />
           {sent ? <Note>PDF без ответов — в чате с ботом. Перешлите его ученику.</Note> : null}
-          <Button variant="secondary" onClick={() => setRevising(true)} disabled={!!busy}>
-            Редактировать текст
-          </Button>
-          <Button variant="secondary" onClick={startEditing} disabled={!!busy}>
-            Изменить тему
-          </Button>
-        </Stack>
+          <MaterialActions
+            busy={busy}
+            sent={sent}
+            hasAnswers={hasAnswers}
+            onDownload={download}
+            onSend={send}
+            onEditText={() => setRevising(true)}
+            onChangeTopic={startEditing}
+            onDelete={onDelete}
+          />
+        </>
       )}
     </Section>
   )

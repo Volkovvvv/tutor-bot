@@ -179,6 +179,8 @@ export default function App() {
           lessons={store.lessons}
           onOpenLesson={openLesson}
           onAddLesson={() => setSheet({ date: todayISO() })}
+          onInvite={() => open({ name: 'importStudents' })}
+          onAddStudent={() => open({ name: 'addStudent' })}
         />
       ) : null}
 
@@ -245,6 +247,7 @@ export default function App() {
           }}
           country={store.profile?.country ?? 'RU'}
           onSetCountry={(country) => store.updateProfile({ country })}
+          tutorName={store.profile?.displayName ?? store.profile?.telegramName ?? ''}
         />
       ) : null}
 
