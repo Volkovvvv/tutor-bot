@@ -28,7 +28,8 @@ describe('isCheckedSubject', () => {
   it('проверяет предметы с однозначным ответом в любом написании', () => {
     expect(isCheckedSubject('Физика')).toBe(true)
     expect(isCheckedSubject(' геометрия ')).toBe(true)
-    expect(isCheckedSubject('Русский язык')).toBe(false)
+    expect(isCheckedSubject('русский')).toBe(true)
+    expect(isCheckedSubject('Английский')).toBe(false)
     expect(isCheckedSubject('Рисование')).toBe(false)
   })
 })
