@@ -1,18 +1,38 @@
 import {
   BadRequestException,
+  ForbiddenException,
   Injectable,
+  Logger,
   NotFoundException,
   ServiceUnavailableException,
   UnauthorizedException,
 } from '@nestjs/common'
+import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import type { Prisma } from '@prisma/client'
 import { BotService } from '../bot/bot.service'
 import { subjectDative } from '../invites/invite-message'
 import { PrismaService } from '../prisma/prisma.service'
 import { AiService } from './ai.service'
+import {
+  applyDoubts,
+  buildCompareMessages,
+  buildSolveMessages,
+  carryDoubts,
+  checkItems,
+  isCheckedSubject,
+  parseDoubts,
+  parseSolved,
+} from './answer-check'
 import type { GenerateMaterialDto } from './dto/generate-material.dto'
-import { coerceContent, DEFAULT_HOMEWORK_COUNT, levelLabel, type MaterialContent, templateContent } from './material-content'
+import {
+  coerceContent,
+  DEFAULT_HOMEWORK_COUNT,
+  levelLabel,
+  type MaterialContent,
+  materialsLimit,
+  templateContent,
+} from './material-content'
 import { renderMaterialPdf } from './material-pdf'
 
 const MATERIAL_SELECT = {
@@ -35,15 +55,21 @@ export interface MaterialView extends MaterialContent {
   createdAt: Date
 }
 
+// Проверка ответов идёт в фоне и при перезапуске сервера теряется:
+// если она не закончилась за это время, уже не закончится.
+const CHECK_TIMEOUT_MS = 4 * 60_000
+
 function toView(row: MaterialRow): MaterialView {
   // В базе лежит то, что прошло coerceContent при генерации; заглушка —
   // на случай строки, записанной в обход сервиса.
   const content = coerceContent(row.content) ?? templateContent(row.topic)
+  const lost = content.check === 'pending' && Date.now() - row.createdAt.getTime() > CHECK_TIMEOUT_MS
   return {
     lessonId: row.lessonId,
     subject: row.subject,
     topic: row.topic,
     ...content,
+    check: lost ? 'failed' : content.check,
     isTemplate: row.model === 'template',
     createdAt: row.createdAt,
   }
@@ -86,12 +112,19 @@ function pdfFilename(topic: string, studentName: string, withAnswers: boolean): 
 
 @Injectable()
 export class MaterialsService {
+  private readonly logger = new Logger(MaterialsService.name)
+  /** Сколько материалов ИИ соберёт одному репетитору; null — без лимита. */
+  private readonly limit: number | null
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly ai: AiService,
     private readonly bot: BotService,
     private readonly jwt: JwtService,
-  ) {}
+    config: ConfigService,
+  ) {
+    this.limit = materialsLimit(config.get('AI_MATERIALS_LIMIT'))
+  }
 
   async list(tutorId: string): Promise<MaterialView[]> {
     const rows = await this.prisma.lessonMaterial.findMany({
@@ -108,14 +141,19 @@ export class MaterialsService {
       where: { id: lessonId, tutorId },
       select: {
         student: { select: { grade: true, goal: true } },
-        tutor: { select: { country: true } },
+        tutor: { select: { country: true, materialsGenerated: true } },
       },
     })
     if (!lesson) throw new NotFoundException('Занятие не найдено')
+    if (this.limit !== null && lesson.tutor.materialsGenerated >= this.limit) {
+      throw new ForbiddenException(
+        `Пробный лимит исчерпан: ИИ собрал ${this.limit} материалов. Готовые материалы остаются — их можно править и скачивать`,
+      )
+    }
 
     const subject = dto.subject.trim()
     const topic = dto.topic.trim()
-    const { content, model } = await this.ai.generate({
+    const generated = await this.ai.generate({
       subject,
       topic,
       grade: lesson.student.grade,
@@ -124,6 +162,13 @@ export class MaterialsService {
       homeworkCount: dto.homeworkCount ?? DEFAULT_HOMEWORK_COUNT,
       wishes: dto.wishes?.trim() || null,
     })
+    const { model } = generated
+    const toCheck = model !== 'template' && isCheckedSubject(subject)
+    const content: MaterialContent = { ...generated.content, check: toCheck ? 'pending' : null }
+    // Заглушка без ключа ИИ в лимит не идёт
+    if (model !== 'template') {
+      await this.prisma.tutor.update({ where: { id: tutorId }, data: { materialsGenerated: { increment: 1 } } })
+    }
 
     const data = {
       subject,
@@ -137,15 +182,66 @@ export class MaterialsService {
       update: { ...data, createdAt: new Date() },
       select: MATERIAL_SELECT,
     })
+    // В фоне: репетитор не ждёт проверку, пометки появятся чуть позже
+    if (toCheck) void this.checkAnswers(lessonId, row.createdAt, subject, lesson.student.grade, content)
     return toView(row)
+  }
+
+  /**
+   * Решает задания заново и помечает те, где ответ не сошёлся с ключом.
+   * Ошибок наружу не бросает: её некому ловить, итог пишется в материал.
+   */
+  private async checkAnswers(
+    lessonId: string,
+    createdAt: Date,
+    subject: string,
+    grade: number | null,
+    content: MaterialContent,
+  ): Promise<void> {
+    const items = checkItems(content)
+    let notes: (string | null)[] | null = null
+    try {
+      const solvedRaw = await this.ai.ask(buildSolveMessages(subject, grade, items))
+      const own = solvedRaw ? parseSolved(solvedRaw, items.length) : null
+      const doubtsRaw = own ? await this.ai.ask(buildCompareMessages(items, own)) : null
+      notes = doubtsRaw ? parseDoubts(doubtsRaw, items.length) : null
+      if (!notes) this.logger.warn(`Проверка ответов не разобрана: ${(doubtsRaw ?? solvedRaw)?.slice(0, 300)}`)
+    } catch (e) {
+      this.logger.warn(`Проверка ответов не удалась: ${(e as Error).message}`)
+    }
+
+    try {
+      // Репетитор мог поправить текст, пока шла проверка, — берём то, что в базе сейчас.
+      // createdAt в условии: материал, собранный заново, проверяет уже своя проверка.
+      const row = await this.prisma.lessonMaterial.findFirst({
+        where: { lessonId, createdAt },
+        select: { content: true },
+      })
+      const current = row ? coerceContent(row.content) : null
+      if (!current) return
+      const next = notes ? applyDoubts(current, items, notes) : { ...current, check: 'failed' as const }
+      await this.prisma.lessonMaterial.updateMany({
+        where: { lessonId, createdAt },
+        data: { content: next as unknown as Prisma.InputJsonValue },
+      })
+    } catch (e) {
+      this.logger.error(`Итог проверки ответов не записан: ${(e as Error).message}`)
+    }
   }
 
   /** Правки репетитора: текст заменяется целиком, тема и модель остаются. */
   async update(tutorId: string, lessonId: string, raw: Record<string, unknown>): Promise<MaterialView> {
-    const content = coerceContent(raw)
-    if (!content) {
+    const edited = coerceContent(raw)
+    if (!edited) {
       throw new BadRequestException('В материале должны остаться теория, пример и хотя бы одно задание')
     }
+    const stored = await this.prisma.lessonMaterial.findFirst({
+      where: { lessonId, tutorId },
+      select: { content: true },
+    })
+    const prev = stored ? coerceContent(stored.content) : null
+    if (!prev) throw new NotFoundException('Материалы не найдены')
+    const content = carryDoubts(prev, edited)
     // updateMany, а не update: tutorId в условии не даёт править чужой материал
     const { count } = await this.prisma.lessonMaterial.updateMany({
       where: { lessonId, tutorId },

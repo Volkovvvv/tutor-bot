@@ -57,6 +57,16 @@ export class AiService {
     throw new ServiceUnavailableException('ИИ не справился с ответом. Попробуйте ещё раз')
   }
 
+  /** Есть ли ИИ: без ключа проверять ответы нечем. */
+  get enabled(): boolean {
+    return Boolean(this.apiKey)
+  }
+
+  /** Один запрос к модели: текст ответа или null. */
+  ask(messages: ReturnType<typeof buildMessages>): Promise<string | null> {
+    return this.complete(messages)
+  }
+
   private async complete(messages: ReturnType<typeof buildMessages>): Promise<string | null> {
     let res: Response
     try {

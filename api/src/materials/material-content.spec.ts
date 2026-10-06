@@ -1,4 +1,12 @@
-import { buildMessages, coerceContent, levelLabel, parseContent, templateContent } from './material-content'
+import {
+  buildMessages,
+  coerceContent,
+  levelLabel,
+  materialsLimit,
+  parseContent,
+  templateContent,
+  withoutCheck,
+} from './material-content'
 import { renderMaterialPdf } from './material-pdf'
 
 const valid = {
@@ -23,12 +31,12 @@ const input = {
 
 describe('parseContent', () => {
   it('разбирает чистый JSON', () => {
-    expect(parseContent(JSON.stringify(valid))).toEqual(valid)
+    expect(parseContent(JSON.stringify(valid))).toEqual(withoutCheck(valid))
   })
 
   it('достаёт JSON из markdown и рассуждений модели', () => {
     const raw = `<think>{"theory": "не то"}</think>Вот материалы:\n\`\`\`json\n${JSON.stringify(valid)}\n\`\`\``
-    expect(parseContent(raw)).toEqual(valid)
+    expect(parseContent(raw)).toEqual(withoutCheck(valid))
   })
 
   it('выбрасывает пустые и нестроковые пункты', () => {
@@ -38,12 +46,23 @@ describe('parseContent', () => {
       mistakes: ['', 7],
       homework: [{ task: '' }, 42, { task: 'Задача', tag: 5 }],
     })
-    expect(parseContent(raw)).toEqual({
+    expect(parseContent(raw)).toEqual(
+      withoutCheck({
+        ...valid,
+        theory: [{ h: 'Ок', p: 'Текст', rule: null, ex: null }],
+        mistakes: [],
+        homework: [{ task: 'Задача', tag: null, answer: null }],
+      }),
+    )
+  })
+
+  it('итог проверки ответов из ответа модели не берёт', () => {
+    const raw = JSON.stringify({
       ...valid,
-      theory: [{ h: 'Ок', p: 'Текст', rule: null, ex: null }],
-      mistakes: [],
-      homework: [{ task: 'Задача', tag: null, answer: null }],
+      check: 'done',
+      homework: [{ task: 'Задача', answer: '5', doubt: 'выдумка модели' }],
     })
+    expect(parseContent(raw)).toMatchObject({ check: null, homework: [{ task: 'Задача', doubt: null }] })
   })
 
   it('разносит шаги решения по строкам', () => {
@@ -85,13 +104,30 @@ describe('coerceContent', () => {
       example: valid.example,
       homework: ['Задача 1'],
     }
-    expect(coerceContent(old)).toEqual({
-      title: null,
-      theory: [{ h: 'Формулировка', p: 'F = m·a.', rule: null, ex: null }],
-      mistakes: [],
-      example: valid.example,
-      homework: [{ task: 'Задача 1', tag: null, answer: null }],
+    expect(coerceContent(old)).toEqual(
+      withoutCheck({
+        title: null,
+        theory: [{ h: 'Формулировка', p: 'F = m·a.', rule: null, ex: null }],
+        mistakes: [],
+        example: valid.example,
+        homework: [{ task: 'Задача 1', tag: null, answer: null }],
+      }),
+    )
+  })
+
+  it('сохраняет итог проверки ответов из базы', () => {
+    const stored = {
+      ...valid,
+      check: 'done',
+      example: { ...valid.example, doubt: 'У проверки 4 м/с², в ключе 5 м/с².' },
+      homework: [{ task: 'Задача 1', answer: '5 Н', doubt: 'У проверки 6 Н, в ключе 5 Н.' }],
+    }
+    expect(coerceContent(stored)).toMatchObject({
+      check: 'done',
+      example: { doubt: 'У проверки 4 м/с², в ключе 5 м/с².' },
+      homework: [{ doubt: 'У проверки 6 Н, в ключе 5 Н.' }],
     })
+    expect(coerceContent({ ...valid, check: 'что-то' })?.check).toBeNull()
   })
 })
 
@@ -202,6 +238,14 @@ describe('buildMessages', () => {
     const [system, user] = buildMessages({ ...input, subject: 'Информатика', goal: 'OGE' })
     expect(system.content).toContain('Формулировка и варианты ответа — как на экзамене')
     expect(user.content).not.toContain('Формат экзамена')
+  })
+})
+
+describe('materialsLimit', () => {
+  it('читает лимит из настройки, пустое и ноль — без лимита', () => {
+    expect(materialsLimit('5')).toBe(5)
+    expect(materialsLimit(15)).toBe(15)
+    for (const off of [undefined, '', '0', 0, '-3', '2.5', 'много']) expect(materialsLimit(off)).toBeNull()
   })
 })
 

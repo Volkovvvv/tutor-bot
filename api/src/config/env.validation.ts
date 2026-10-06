@@ -82,6 +82,11 @@ class EnvVars {
   @IsString()
   @IsOptional()
   AI_MODEL?: string
+
+  // Сколько материалов ИИ соберёт одному репетитору; не задан — без лимита.
+  @IsNumber()
+  @IsOptional()
+  AI_MATERIALS_LIMIT?: number
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvVars {

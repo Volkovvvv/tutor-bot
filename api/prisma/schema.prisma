@@ -69,6 +69,10 @@ model Tutor {
   // Когда репетитор прошёл онбординг; null — показать его при входе.
   onboardedAt DateTime?
 
+  // Сколько раз ИИ собирал материалы, считая повторные сборки одного урока:
+  // по строкам LessonMaterial этого не узнать, повтор заменяет прежнюю.
+  materialsGenerated Int @default(0)
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
