@@ -56,6 +56,19 @@ export function materialsLimit(raw: unknown): number | null {
   return Number.isInteger(limit) && limit > 0 ? limit : null
 }
 
+export const REASONING_EFFORTS = ['low', 'medium', 'high', 'none'] as const
+export type ReasoningEffort = (typeof REASONING_EFFORTS)[number]
+
+/**
+ * Уровень рассуждений модели из настройки AI_REASONING_EFFORT.
+ * none — не просить рассуждений вовсе; пусто или опечатка — high:
+ * с ошибкой в настройке сервер должен работать как раньше, а не падать.
+ */
+export function reasoningEffort(raw: unknown): ReasoningEffort {
+  const value = String(raw ?? '').trim().toLowerCase()
+  return (REASONING_EFFORTS as readonly string[]).includes(value) ? (value as ReasoningEffort) : 'high'
+}
+
 export interface PromptInput {
   subject: string
   topic: string

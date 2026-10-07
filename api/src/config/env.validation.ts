@@ -83,6 +83,12 @@ class EnvVars {
   @IsOptional()
   AI_MODEL?: string
 
+  // Сколько модель рассуждает перед ответом: low, medium, high или none.
+  // Без проверки значения: опечатка не должна ронять сервер, см. reasoningEffort.
+  @IsString()
+  @IsOptional()
+  AI_REASONING_EFFORT?: string
+
   // Сколько материалов ИИ соберёт одному репетитору; не задан — без лимита.
   @IsNumber()
   @IsOptional()

@@ -1,6 +1,14 @@
 import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { buildMessages, type MaterialContent, parseContent, type PromptInput, templateContent } from './material-content'
+import {
+  buildMessages,
+  type MaterialContent,
+  parseContent,
+  type PromptInput,
+  type ReasoningEffort,
+  reasoningEffort,
+  templateContent,
+} from './material-content'
 
 export interface Generated {
   content: MaterialContent
@@ -21,10 +29,11 @@ const MAX_TOKENS = 16000
 // исчерпывают его целиком, не дойдя до ответа. Полностью выключать их нельзя:
 // Claude такой запрос отклоняет, а бесплатные модели без рассуждений мешают
 // русский с другими языками. Лимит в токенах Claude игнорирует, слушает только
-// уровень усилий. Ниже «high» ставить нельзя: на «low» и «medium» он чаще всего
-// не рассуждает вовсе и тогда правит себя прямо в тексте — «листья опадаются»,
-// «Нет, перепиши так…» в условии задания. Минута ожидания — цена верных заданий.
-const REASONING_EFFORT = 'high'
+// уровень усилий. Для Claude ниже «high» ставить нельзя: на «low» и «medium» он
+// чаще всего не рассуждает вовсе и тогда правит себя прямо в тексте — «листья
+// опадаются», «Нет, перепиши так…» в условии задания. Минута ожидания — цена
+// верных заданий. Уровень задаётся настройкой AI_REASONING_EFFORT: у другой
+// модели он может быть другим, и подбирать его надо вместе с AI_MODEL.
 
 /**
  * Генерация через любой OpenAI-совместимый API (по умолчанию OpenRouter).
@@ -37,12 +46,15 @@ export class AiService {
   private readonly baseUrl: string
   private readonly model: string
   private readonly isOpenRouter: boolean
+  private readonly effort: ReasoningEffort
 
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('AI_API_KEY') || undefined
     this.baseUrl = (config.get<string>('AI_BASE_URL') || 'https://openrouter.ai/api/v1').replace(/\/$/, '')
     this.model = config.get<string>('AI_MODEL') || 'nvidia/nemotron-3-super-120b-a12b:free'
     this.isOpenRouter = this.baseUrl.includes('openrouter.ai')
+    this.effort = reasoningEffort(config.get('AI_REASONING_EFFORT'))
+    this.logger.log(`ИИ: модель ${this.model}, рассуждения ${this.effort}`)
     if (!this.apiKey) {
       this.logger.warn('AI_API_KEY не задан — материалы урока собираются из шаблона')
     }
@@ -91,7 +103,7 @@ export class AiService {
           max_tokens: MAX_TOKENS,
           // Параметр OpenRouter. Другим провайдерам не шлём:
           // незнакомое поле они могут отклонить.
-          ...(this.isOpenRouter ? { reasoning: { effort: REASONING_EFFORT } } : {}),
+          ...(this.isOpenRouter && this.effort !== 'none' ? { reasoning: { effort: this.effort } } : {}),
         }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })

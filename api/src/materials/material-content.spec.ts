@@ -4,6 +4,7 @@ import {
   levelLabel,
   materialsLimit,
   parseContent,
+  reasoningEffort,
   templateContent,
   withoutCheck,
 } from './material-content'
@@ -268,6 +269,15 @@ describe('materialsLimit', () => {
     expect(materialsLimit('5')).toBe(5)
     expect(materialsLimit(15)).toBe(15)
     for (const off of [undefined, '', '0', 0, '-3', '2.5', 'много']) expect(materialsLimit(off)).toBeNull()
+  })
+})
+
+describe('reasoningEffort', () => {
+  it('читает уровень из настройки, пустое и опечатка — high', () => {
+    expect(reasoningEffort('low')).toBe('low')
+    expect(reasoningEffort(' Medium ')).toBe('medium')
+    expect(reasoningEffort('none')).toBe('none')
+    for (const unknown of [undefined, '', 'hihg', 'выкл', 3]) expect(reasoningEffort(unknown)).toBe('high')
   })
 })
 
