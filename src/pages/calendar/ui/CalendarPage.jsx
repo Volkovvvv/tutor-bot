@@ -42,7 +42,11 @@ export default function CalendarPage({ students, lessons, date, onSelectDate, on
   for (let h = startHour; h <= endHour; h += 1) hours.push(h)
   const showNow = date === now.date && now.minutes >= startHour * 60 && now.minutes <= endHour * 60
 
-  const countOn = (d) => lessons.filter((l) => l.date === d && l.status !== 'cancelled').length
+  // Занятий по дням одним проходом, а не фильтром по всему списку на каждый день недели
+  const counts = new Map()
+  for (const l of lessons) {
+    if (l.status !== 'cancelled') counts.set(l.date, (counts.get(l.date) ?? 0) + 1)
+  }
 
   return (
     <Screen>
@@ -63,7 +67,7 @@ export default function CalendarPage({ students, lessons, date, onSelectDate, on
         </button>
         <div className={s.week}>
           {week.map((d) => {
-            const n = Math.min(countOn(d), 4)
+            const n = Math.min(counts.get(d) ?? 0, 4)
             return (
               <button
                 key={d}

@@ -41,18 +41,25 @@ const STEP_AT_MS = [12000, 28000, 45000]
 // Сколько ждать между запросами, пока сервер проверяет ответы
 const CHECK_POLL_MS = 5000
 
-// О проверке ответов говорим, только когда она что-то нашла: «расхождений нет»
-// репетитор прочтёт как «ответы верные», а этого проверка не обещает
+// О проверке говорим, только когда она что-то нашла: «замечаний нет»
+// репетитор прочтёт как «всё верно», а этого проверка не обещает
 function checkNote(material) {
-  const doubts = material.homework.filter((h) => h.doubt).length + (material.example.doubt ? 1 : 0)
+  const doubts =
+    material.homework.filter((h) => h.doubt).length +
+    material.theory.filter((b) => b.doubt).length +
+    (material.example.doubt ? 1 : 0) +
+    (material.theoryDoubt ? 1 : 0)
   if (doubts === 0) return null
-  return `Проверка получила другой результат в ${doubts} ${doubts === 1 ? 'месте' : 'местах'} — они отмечены ниже.`
+  return 'Проверка отметила места, на которые стоит посмотреть, — они помечены ниже.'
 }
 
 const COUNTRY_OPTIONS = [
   { value: 'RU', label: 'Россия' },
   { value: 'BY', label: 'Беларусь' },
 ]
+
+// Материал одного урока: список всех материалов с текстами растёт с каждой генерацией
+const materialsPath = (lessonId) => `/materials?lessonId=${encodeURIComponent(lessonId)}`
 
 function reportError(message) {
   window.dispatchEvent(new CustomEvent('api-error', { detail: message }))
@@ -97,7 +104,7 @@ export default function LessonMaterial({
     setSent(false)
     setRevising(false)
     api
-      .get('/materials')
+      .get(materialsPath(lessonId))
       .then((list) => {
         if (!alive) return
         setMaterial(list.find((m) => m.lessonId === lessonId) ?? null)
@@ -119,7 +126,7 @@ export default function LessonMaterial({
     let alive = true
     const timer = setInterval(() => {
       api
-        .get('/materials')
+        .get(materialsPath(lessonId))
         .then((list) => {
           const next = list.find((m) => m.lessonId === lessonId)
           // Только итог проверки: текст репетитор мог уже открыть на правку
@@ -223,6 +230,8 @@ export default function LessonMaterial({
 
   const showForm = !material || editing
   const hasAnswers = material ? material.homework.some((h) => h.answer) : false
+  // Считается один раз на рендер, а не в условии и в самом тексте
+  const note = material ? checkNote(material) : null
 
   return (
     <Section title="Материалы урока" aside={<span className={s.ai}>ИИ</span>}>
@@ -319,7 +328,7 @@ export default function LessonMaterial({
           ) : (
             <Note>Проверьте текст перед отправкой: ИИ может ошибаться в расчётах и ответах.</Note>
           )}
-          {checkNote(material) ? <Note>{checkNote(material)}</Note> : null}
+          {note ? <Note>{note}</Note> : null}
           <MaterialPreview
             material={material}
             pill={[material.subject, level].filter(Boolean).join(' · ')}

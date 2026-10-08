@@ -46,6 +46,11 @@ const JUDGE = 'anthropic/claude-sonnet-5.5'
 const BUDGET_USD = Number(process.env.EVAL_BUDGET_USD ?? 3.5)
 
 const LABEL = process.env.EVAL_LABEL?.trim()
+// Сколько раз собрать каждую тему: один прогон слишком шумный, чтобы сравнивать версии промпта.
+// Повторы идут отдельными строками «модель@пометка·1», «…·2».
+// Уровень рассуждений при генерации — как AI_REASONING_EFFORT на сервере
+const EFFORT = process.env.EVAL_EFFORT?.trim() || 'high'
+const RUNS = Math.max(1, Math.floor(Number(process.env.EVAL_RUNS ?? 1)) || 1)
 const SET = process.env.EVAL_SET?.trim() || 'main'
 
 /** ahead — слова из тем следующих классов: в материале их быть не должно. */
@@ -106,6 +111,20 @@ const CASE_SETS: Record<string, Case[]> = {
     // Та же тема с пожеланиями репетитора
     { subject: 'Математика', topic: 'Квадратные уравнения', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, wishes: 'В теории разбери неполные уравнения. В домашке два неполных уравнения и одна текстовая задача про площадь прямоугольника.' },
   ],
+  // Русский язык: темы, где модели ошибаются чаще всего — правила с исключениями
+  // и особыми формами, спорные нормы, пунктуация с вариантами. Последние две — для контроля.
+  ru: [
+    { subject: 'Русский язык', topic: 'Н и НН в прилагательных', grade: null, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Н и НН в причастиях и отглагольных прилагательных', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Деепричастный оборот', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Причастный оборот', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'НЕ с прилагательными', grade: 6, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Приставки ПРЕ- и ПРИ-', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Вводные слова', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Тире между подлежащим и сказуемым', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Чередование гласных в корнях -лаг-/-лож- и -раст-/-ращ-/-рос-', grade: 6, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: '-тся и -ться в глаголах', grade: 5, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+  ],
   // Класс и предмет, для которых есть карточка учебника
   textbook: [
     { subject: 'Математика', topic: 'Сложение чисел с разными знаками', grade: 6, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
@@ -156,7 +175,9 @@ const spent = (entries: Entry[]) => entries.reduce((s, e) => s + e.cost + (e.jud
 async function chat(
   model: string,
   messages: { role: string; content: string }[],
-  reasoningTokens: number,
+  // Как модель рассуждает и сколько токенов ей дать на ответ
+  reasoning: Record<string, unknown>,
+  maxTokens = 8000,
 ): Promise<{ text: string | null; cost: number; ms: number; error: string | null }> {
   const started = Date.now()
   let text = ''
@@ -169,8 +190,8 @@ async function chat(
         model,
         messages,
         temperature: 0.4,
-        max_tokens: 8000,
-        reasoning: { max_tokens: reasoningTokens },
+        max_tokens: maxTokens,
+        reasoning,
         usage: { include: true },
         stream: true,
       }),
@@ -228,13 +249,16 @@ async function pool(tasks: (() => Promise<void>)[], entries: Entry[]): Promise<v
 }
 
 async function gen(entries: Entry[]): Promise<void> {
-  const tasks = MODELS.filter((m) => !ONLY || ONLY.includes(m)).flatMap((apiModel) => {
-    const model = LABEL ? `${apiModel}@${LABEL}` : apiModel
+  const tasks = MODELS.filter((m) => !ONLY || ONLY.includes(m)).flatMap((apiModel) =>
+    Array.from({ length: RUNS }, (_, run) => run).flatMap((run) => {
+    const base = LABEL ? `${apiModel}@${LABEL}` : apiModel
+    const model = RUNS > 1 ? `${base}·${run + 1}` : base
     return CASES.filter((c) => !entries.some((e) => e.model === model && e.topic === c.topic && e.content)).map((input) => async () => {
       // Две попытки — как в AiService
       let last: Entry = { model, topic: input.topic, ms: 0, cost: 0, content: null, error: 'не запускалась' }
       for (let attempt = 0; attempt < 2 && !last.content; attempt++) {
-        const r = await chat(apiModel, buildMessages(input), 2000)
+        // Те же настройки, что в AiService: иначе стенд меряет не то, что получит репетитор
+        const r = await chat(apiModel, buildMessages(input), { effort: EFFORT }, 16000)
         const content = r.text ? parseContent(r.text) : null
         last = {
           model,
@@ -249,7 +273,7 @@ async function gen(entries: Entry[]): Promise<void> {
       if (i === -1) entries.push(last)
       else entries[i] = last
     })
-  })
+  }))
   await pool(tasks, entries)
 }
 
@@ -258,7 +282,7 @@ const JUDGE_SYSTEM = [
   'По этому тексту ученик будет учиться, поэтому любая фактическая ошибка недопустима. Не будь снисходительным.',
   '',
   'Что сделать:',
-  '1. Теория, типичные ошибки и разбор примера: найди фактические ошибки (неверное правило, формула, вычисление, неверный пример). Стиль сюда не относится.',
+  '1. Теория, типичные ошибки и разбор примера: найди фактические ошибки (неверное правило, формула, вычисление, неверный пример). Отдельно проверь: не сформулировано ли правило шире, чем оно верно («всегда», «любой», «столько же», когда есть исключения или особые формы); не противоречит ли пример своему правилу; не подана ли спорная или двоякая норма как однозначная. Стиль сюда не относится.',
   '2. Каждое задание домашки реши самостоятельно, затем сравни с ответом автора. Вердикт:',
   '   ok — задание корректно и ответ верный;',
   '   wrong_answer — задание корректно, но ответ автора неверный или неполный по сути;',
@@ -297,7 +321,7 @@ async function judge(entries: Entry[]): Promise<void> {
         'Материал:',
         JSON.stringify(e.content, null, 1),
       ].join('\n')
-      const r = await chat(JUDGE, [{ role: 'system', content: JUDGE_SYSTEM }, { role: 'user', content: user }], 2000)
+      const r = await chat(JUDGE, [{ role: 'system', content: JUDGE_SYSTEM }, { role: 'user', content: user }], { max_tokens: 2000 })
       e.judgeCost = (e.judgeCost ?? 0) + r.cost
       e.verdict = r.text ? parseVerdict(r.text) : null
     })

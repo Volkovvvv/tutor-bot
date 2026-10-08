@@ -89,6 +89,15 @@ class EnvVars {
   @IsOptional()
   AI_REASONING_EFFORT?: string
 
+  // Модель и уровень рассуждений для проверки теории; не заданы — как у генерации.
+  @IsString()
+  @IsOptional()
+  AI_CHECK_MODEL?: string
+
+  @IsString()
+  @IsOptional()
+  AI_CHECK_EFFORT?: string
+
   // Сколько материалов ИИ соберёт одному репетитору; не задан — без лимита.
   @IsNumber()
   @IsOptional()

@@ -18,12 +18,14 @@ function MaterialPreview({ material, pill, meta, footer }) {
 
       <div className={s.body}>
         <div className={s.label}>01 · Теория</div>
+        {material.theoryDoubt ? <p className={s.doubt}>Проверьте: {material.theoryDoubt}</p> : null}
         {material.theory.map((block, i) => (
           <div key={i} className={s.block}>
             <div className={s.h}>{block.h}</div>
             <p className={s.p}>{block.p}</p>
             {block.rule ? <p className={s.rule}>{block.rule}</p> : null}
             {block.ex ? <p className={s.ex}>{block.ex}</p> : null}
+            {block.doubt ? <p className={s.doubt}>Проверьте: {block.doubt}</p> : null}
           </div>
         ))}
 

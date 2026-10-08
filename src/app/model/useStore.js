@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, login } from '../../shared/api/client.js'
 import { haptic } from '../../shared/api/telegram.js'
 import {
@@ -27,6 +27,28 @@ function reportError(message) {
   window.dispatchEvent(new CustomEvent('api-error', { detail: message }))
 }
 
+const POLL_MS = 15_000
+
+// Откат трогает только ту запись, что меняли: слепок всего списка затёр бы
+// правки, которые прошли, пока этот запрос был в пути.
+const patchItem = (id, patch) => (list) => list.map((x) => (x.id === id ? { ...x, ...patch } : x))
+
+// Вернуть запись, удалённую оптимистично, на прежнее место
+function putBack(items) {
+  return (list) => {
+    const missing = items.filter(({ item }) => !list.some((x) => x.id === item.id))
+    if (missing.length === 0) return list
+    const next = [...list]
+    for (const { item, index } of missing) next.splice(Math.min(index, next.length), 0, item)
+    return next
+  }
+}
+
+// Только поля patch из записи before: чтобы откатить правку, а не всю запись
+function fieldsOf(before, patch) {
+  return Object.fromEntries(Object.keys(patch).map((key) => [key, before[key]]))
+}
+
 export function useStore() {
   const [students, setStudents] = useState([])
   const [lessons, setLessons] = useState([])
@@ -36,7 +58,14 @@ export function useStore() {
   const [authError, setAuthError] = useState(null)
   // Ссылка приглашения по id ученика — сервер не хранит её на карточке,
   // только на выданном Invite. Живёт до перезагрузки страницы.
-  const [inviteLinks, setInviteLinks] = useState(new Map())
+  const [inviteLinks, setInviteLinks] = useState(() => new Map())
+
+  // Актуальные списки для обработчиков: им нужно знать, что было до правки,
+  // а зависеть от списков значило бы пересоздавать каждый обработчик при любом изменении
+  const studentsRef = useRef(students)
+  const lessonsRef = useRef(lessons)
+  studentsRef.current = students
+  lessonsRef.current = lessons
 
   // Вход и первичная загрузка. initData валиден весь сеанс работы
   // мини-аппа, поэтому один раз при монтировании.
@@ -70,19 +99,32 @@ export function useStore() {
 
   // Статус приглашения меняет бот сам, когда ученик жмёт /start — с сервера,
   // а не по действию в этом приложении. Опрашиваем раз в 15 секунд, пока
-  // экран открыт, чтобы «Приглашение отправлено» само сменилось на «Подключён».
+  // экран виден, чтобы «Приглашение отправлено» само сменилось на «Подключён».
+  // Свёрнутому приложению опрос не нужен; при возврате обновляемся сразу.
   useEffect(() => {
-    if (!ready) return
-    const id = setInterval(() => {
+    if (!ready) return undefined
+
+    const refresh = () => {
+      if (document.hidden) return
       api
         .get('/students')
-        .then((res) => setStudents(res.map(studentFromApi)))
+        .then((res) => {
+          const next = res.map(studentFromApi)
+          // Ничего не изменилось — не перерисовываем приложение впустую
+          setStudents((prev) => (JSON.stringify(prev) === JSON.stringify(next) ? prev : next))
+        })
         .catch(() => {
           // Сеть моргнула — молча пробуем на следующем тике,
           // не заваливаем пользователя ошибками фонового опроса.
         })
-    }, 15_000)
-    return () => clearInterval(id)
+    }
+
+    const id = setInterval(refresh, POLL_MS)
+    document.addEventListener('visibilitychange', refresh)
+    return () => {
+      clearInterval(id)
+      document.removeEventListener('visibilitychange', refresh)
+    }
   }, [ready])
 
   const addStudent = useCallback((input) => {
@@ -132,62 +174,59 @@ export function useStore() {
   }, [])
 
   const setStatus = useCallback((id, status) => {
-    const prev = lessons
-    setLessons((list) => list.map((l) => (l.id === id ? { ...l, status } : l)))
-    api
-      .patch(`/lessons/${id}`, { status: statusToApi(status) })
-      .catch((e) => {
-        setLessons(prev)
-        reportError(e.message)
-      })
-    haptic()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessons])
-
-  const togglePaid = useCallback((id) => {
-    const prev = lessons
-    const current = lessons.find((l) => l.id === id)
-    if (!current) return
-    const nextPaid = !current.paid
-    setLessons((list) => list.map((l) => (l.id === id ? { ...l, paid: nextPaid } : l)))
-    api
-      .patch(`/lessons/${id}`, { paid: nextPaid })
-      .catch((e) => {
-        setLessons(prev)
-        reportError(e.message)
-      })
-    haptic()
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessons])
-
-  const deleteLesson = useCallback((id) => {
-    const prev = lessons
-    setLessons((list) => list.filter((l) => l.id !== id))
-    api.delete(`/lessons/${id}`).catch((e) => {
-      setLessons(prev)
+    const before = lessonsRef.current.find((l) => l.id === id)
+    setLessons(patchItem(id, { status }))
+    api.patch(`/lessons/${id}`, { status: statusToApi(status) }).catch((e) => {
+      if (before) setLessons(patchItem(id, { status: before.status }))
       reportError(e.message)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [lessons])
+    haptic()
+  }, [])
+
+  const togglePaid = useCallback((id) => {
+    const before = lessonsRef.current.find((l) => l.id === id)
+    if (!before) return
+    const paid = !before.paid
+    setLessons(patchItem(id, { paid }))
+    api.patch(`/lessons/${id}`, { paid }).catch((e) => {
+      setLessons(patchItem(id, { paid: before.paid }))
+      reportError(e.message)
+    })
+    haptic()
+  }, [])
+
+  const deleteLesson = useCallback((id) => {
+    const index = lessonsRef.current.findIndex((l) => l.id === id)
+    const removed = index === -1 ? null : { item: lessonsRef.current[index], index }
+    setLessons((list) => list.filter((l) => l.id !== id))
+    api.delete(`/lessons/${id}`).catch((e) => {
+      if (removed) setLessons(putBack([removed]))
+      reportError(e.message)
+    })
+  }, [])
 
   // Удаление ученика на сервере отказывает, если у него есть занятия
   // (см. StudentsService.remove) — тогда просим архивировать вместо удаления.
+  // Возвращает id удалённых вместе с ним занятий: экран, открытый на одном
+  // из них, нужно закрыть.
   const deleteStudent = useCallback((id) => {
-    const prevStudents = students
-    const prevLessons = lessons
+    const at = (list, match) =>
+      list.flatMap((item, index) => (match(item) ? [{ item, index }] : []))
+    const removedStudent = at(studentsRef.current, (s) => s.id === id)
+    const removedLessons = at(lessonsRef.current, (l) => l.studentId === id)
     setStudents((list) => list.filter((s) => s.id !== id))
     setLessons((list) => list.filter((l) => l.studentId !== id))
     api.delete(`/students/${id}`).catch((e) => {
-      setStudents(prevStudents)
-      setLessons(prevLessons)
+      setStudents(putBack(removedStudent))
+      setLessons(putBack(removedLessons))
       reportError(
         e.status === 409
           ? 'У ученика есть занятия — удаление недоступно. Обратитесь к разработчику для архивации.'
           : e.message
       )
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [students, lessons])
+    return removedLessons.map(({ item }) => item.id)
+  }, [])
 
   // Приглашение создаёт сервер: он же генерирует безопасный код и ссылку
   // (16 символов, случайных криптографически — см. api/README.md).
@@ -228,26 +267,22 @@ export function useStore() {
 
   // Класс и цель ученика. Патч уходит на сервер как есть: поля те же.
   const updateStudent = useCallback((id, patch) => {
-    const prev = students
-    setStudents((list) => list.map((s) => (s.id === id ? { ...s, ...patch } : s)))
+    const before = studentsRef.current.find((s) => s.id === id)
+    setStudents(patchItem(id, patch))
     api.patch(`/students/${id}`, patch).catch((e) => {
-      setStudents(prev)
+      if (before) setStudents(patchItem(id, fieldsOf(before, patch)))
       reportError(e.message)
     })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [students])
+  }, [])
 
   const updateNotify = useCallback((id, notify) => {
-    const prev = students
-    setStudents((list) => list.map((s) => (s.id === id ? { ...s, notify } : s)))
-    api
-      .patch(`/students/${id}/notify`, notifyToApi(notify))
-      .catch((e) => {
-        setStudents(prev)
-        reportError(e.message)
-      })
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [students])
+    const before = studentsRef.current.find((s) => s.id === id)
+    setStudents(patchItem(id, { notify }))
+    api.patch(`/students/${id}/notify`, notifyToApi(notify)).catch((e) => {
+      if (before) setStudents(patchItem(id, { notify: before.notify }))
+      reportError(e.message)
+    })
+  }, [])
 
   return {
     ready,

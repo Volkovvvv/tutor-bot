@@ -16,13 +16,20 @@ import { PrismaService } from '../prisma/prisma.service'
 import { AiService } from './ai.service'
 import {
   applyDoubts,
+  applyTheoryFindings,
   buildCompareMessages,
   buildSolveMessages,
+  buildTheoryCheckMessages,
   carryDoubts,
+  type CheckItem,
   checkItems,
+  codeNotes,
   isCheckedSubject,
+  mergeNotes,
   parseDoubts,
   parseSolved,
+  parseTheoryFindings,
+  type TheoryFinding,
 } from './answer-check'
 import type { GenerateMaterialDto } from './dto/generate-material.dto'
 import {
@@ -126,9 +133,9 @@ export class MaterialsService {
     this.limit = materialsLimit(config.get('AI_MATERIALS_LIMIT'))
   }
 
-  async list(tutorId: string): Promise<MaterialView[]> {
+  async list(tutorId: string, lessonId?: string): Promise<MaterialView[]> {
     const rows = await this.prisma.lessonMaterial.findMany({
-      where: { tutorId },
+      where: { tutorId, ...(lessonId ? { lessonId } : {}) },
       select: MATERIAL_SELECT,
       orderBy: { createdAt: 'desc' },
     })
@@ -183,32 +190,28 @@ export class MaterialsService {
       select: MATERIAL_SELECT,
     })
     // В фоне: репетитор не ждёт проверку, пометки появятся чуть позже
-    if (toCheck) void this.checkAnswers(lessonId, row.createdAt, subject, lesson.student.grade, content)
+    if (toCheck) void this.checkMaterial(lessonId, row.createdAt, subject, lesson.student.grade, topic, content)
     return toView(row)
   }
 
   /**
-   * Решает задания заново и помечает те, где ответ не сошёлся с ключом.
+   * Проверяет ключ ответов и теорию и помечает то, что вызвало сомнение.
    * Ошибок наружу не бросает: её некому ловить, итог пишется в материал.
+   * Обе проверки идут одновременно; если не удалась одна, пометки другой всё равно сохраняются.
    */
-  private async checkAnswers(
+  private async checkMaterial(
     lessonId: string,
     createdAt: Date,
     subject: string,
     grade: number | null,
+    topic: string,
     content: MaterialContent,
   ): Promise<void> {
     const items = checkItems(content)
-    let notes: (string | null)[] | null = null
-    try {
-      const solvedRaw = await this.ai.ask(buildSolveMessages(subject, grade, items))
-      const own = solvedRaw ? parseSolved(solvedRaw, items.length) : null
-      const doubtsRaw = own ? await this.ai.ask(buildCompareMessages(items, own)) : null
-      notes = doubtsRaw ? parseDoubts(doubtsRaw, items.length) : null
-      if (!notes) this.logger.warn(`Проверка ответов не разобрана: ${(doubtsRaw ?? solvedRaw)?.slice(0, 300)}`)
-    } catch (e) {
-      this.logger.warn(`Проверка ответов не удалась: ${(e as Error).message}`)
-    }
+    const [notes, findings] = await Promise.all([
+      this.runAnswerCheck(subject, grade, items, topic),
+      this.runTheoryCheck(subject, grade, topic, content),
+    ])
 
     try {
       // Репетитор мог поправить текст, пока шла проверка, — берём то, что в базе сейчас.
@@ -219,13 +222,60 @@ export class MaterialsService {
       })
       const current = row ? coerceContent(row.content) : null
       if (!current) return
-      const next = notes ? applyDoubts(current, items, notes) : { ...current, check: 'failed' as const }
+      let next: MaterialContent = current
+      if (notes) next = applyDoubts(next, items, notes)
+      if (findings) next = applyTheoryFindings(next, findings)
+      next = { ...next, check: notes || findings ? 'done' : 'failed' }
       await this.prisma.lessonMaterial.updateMany({
         where: { lessonId, createdAt },
         data: { content: next as unknown as Prisma.InputJsonValue },
       })
     } catch (e) {
-      this.logger.error(`Итог проверки ответов не записан: ${(e as Error).message}`)
+      this.logger.error(`Итог проверки материала не записан: ${(e as Error).message}`)
+    }
+  }
+
+  /** Решает задания заново, не видя ключа, и сверяет; null — проверка не удалась. */
+  private async runAnswerCheck(
+    subject: string,
+    grade: number | null,
+    items: CheckItem[],
+    topic: string,
+  ): Promise<(string | null)[] | null> {
+    // Что сверилось подстановкой, модели не отдаём: код в счёте не ошибается и ничего не стоит
+    const byCode = codeNotes(subject, items)
+    const rest = items.filter((_, i) => byCode[i] === undefined)
+    const decided = items.length - rest.length
+    if (rest.length === 0) return mergeNotes(byCode, [])
+
+    try {
+      const solvedRaw = await this.ai.ask(buildSolveMessages(subject, grade, rest, topic))
+      const own = solvedRaw ? parseSolved(solvedRaw, rest.length) : null
+      const doubtsRaw = own ? await this.ai.ask(buildCompareMessages(rest, own)) : null
+      const notes = doubtsRaw ? parseDoubts(doubtsRaw, rest.length) : null
+      if (!notes) this.logger.warn(`Проверка ответов не разобрана: ${(doubtsRaw ?? solvedRaw)?.slice(0, 300)}`)
+      return notes || decided ? mergeNotes(byCode, notes) : null
+    } catch (e) {
+      this.logger.warn(`Проверка ответов не удалась: ${(e as Error).message}`)
+      return decided ? mergeNotes(byCode, null) : null
+    }
+  }
+
+  /** Ищет в теории ошибки, из-за которых ученик узнает неверное; null — проверка не удалась. */
+  private async runTheoryCheck(
+    subject: string,
+    grade: number | null,
+    topic: string,
+    content: MaterialContent,
+  ): Promise<TheoryFinding[] | null> {
+    try {
+      const raw = await this.ai.askChecker(buildTheoryCheckMessages(subject, grade, topic, content))
+      const findings = raw ? parseTheoryFindings(raw) : null
+      if (!findings) this.logger.warn(`Проверка теории не разобрана: ${raw?.slice(0, 300)}`)
+      return findings
+    } catch (e) {
+      this.logger.warn(`Проверка теории не удалась: ${(e as Error).message}`)
+      return null
     }
   }
 

@@ -47,6 +47,10 @@ export class AiService {
   private readonly model: string
   private readonly isOpenRouter: boolean
   private readonly effort: ReasoningEffort
+  // Проверяющий теории — отдельная модель: автор своих ошибок не видит.
+  // Sol на medium не нашёл «ценный → ценен» ни разу из пяти, Sonnet на high — четыре из четырёх.
+  private readonly checkModel: string
+  private readonly checkEffort: ReasoningEffort
 
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('AI_API_KEY') || undefined
@@ -54,7 +58,11 @@ export class AiService {
     this.model = config.get<string>('AI_MODEL') || 'nvidia/nemotron-3-super-120b-a12b:free'
     this.isOpenRouter = this.baseUrl.includes('openrouter.ai')
     this.effort = reasoningEffort(config.get('AI_REASONING_EFFORT'))
-    this.logger.log(`ИИ: модель ${this.model}, рассуждения ${this.effort}`)
+    this.checkModel = config.get<string>('AI_CHECK_MODEL') || this.model
+    this.checkEffort = config.get('AI_CHECK_EFFORT') ? reasoningEffort(config.get('AI_CHECK_EFFORT')) : this.effort
+    this.logger.log(
+      `ИИ: модель ${this.model}, рассуждения ${this.effort}; проверка теории: ${this.checkModel}, рассуждения ${this.checkEffort}`,
+    )
     if (!this.apiKey) {
       this.logger.warn('AI_API_KEY не задан — материалы урока собираются из шаблона')
     }
@@ -85,7 +93,16 @@ export class AiService {
     return this.complete(messages)
   }
 
-  private async complete(messages: ReturnType<typeof buildMessages>): Promise<string | null> {
+  /** Запрос к проверяющей модели (AI_CHECK_MODEL); не задана — к той же, что пишет материалы. */
+  askChecker(messages: ReturnType<typeof buildMessages>): Promise<string | null> {
+    return this.complete(messages, this.checkModel, this.checkEffort)
+  }
+
+  private async complete(
+    messages: ReturnType<typeof buildMessages>,
+    model = this.model,
+    effort = this.effort,
+  ): Promise<string | null> {
     let res: Response
     try {
       res = await fetch(`${this.baseUrl}/chat/completions`, {
@@ -97,13 +114,13 @@ export class AiService {
           'x-title': 'Tutor CRM',
         },
         body: JSON.stringify({
-          model: this.model,
+          model,
           messages,
           temperature: 0.4,
           max_tokens: MAX_TOKENS,
           // Параметр OpenRouter. Другим провайдерам не шлём:
           // незнакомое поле они могут отклонить.
-          ...(this.isOpenRouter && this.effort !== 'none' ? { reasoning: { effort: this.effort } } : {}),
+          ...(this.isOpenRouter && effort !== 'none' ? { reasoning: { effort } } : {}),
         }),
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })

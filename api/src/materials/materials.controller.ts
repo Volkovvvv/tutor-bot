@@ -11,9 +11,14 @@ import { MaterialsService, type MaterialView } from './materials.service'
 export class MaterialsController {
   constructor(private readonly materials: MaterialsService) {}
 
+  // ?lessonId — материал одного урока (список из 0 или 1 элемента): экран урока
+  // не должен скачивать тексты всех материалов репетитора и опрашивать их целиком
   @Get('materials')
-  list(@CurrentUser() user: AuthUser): Promise<MaterialView[]> {
-    return this.materials.list(user.tutorId)
+  list(
+    @CurrentUser() user: AuthUser,
+    @Query('lessonId', new ParseUUIDPipe({ optional: true })) lessonId?: string,
+  ): Promise<MaterialView[]> {
+    return this.materials.list(user.tutorId, lessonId)
   }
 
   // Каждая генерация — запрос к ИИ: у бесплатных моделей жёсткий

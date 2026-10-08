@@ -74,17 +74,21 @@ export default function App() {
   const openStudent = useCallback((id) => open({ name: 'student', id }), [open])
   const goBack = useCallback(() => setView((current) => backTarget(current)), [])
 
+  // Из store берём отдельные функции, а не сам объект: он новый на каждый
+  // рендер, и зависеть от него значило бы пересоздавать обработчики каждый раз
+  const { addStudent, addLesson, deleteLesson, deleteStudent, setStatus } = store
+
   const handleAddStudent = useCallback(
     (input) => {
-      store.addStudent(input)
+      addStudent(input)
       setView({ name: 'students' })
     },
-    [store]
+    [addStudent]
   )
 
   const handleAddLesson = useCallback(
     (input) => {
-      store.addLesson(input)
+      addLesson(input)
       setSheet(null)
       setCalendarDate(input.date)
       const student = studentById.get(input.studentId)
@@ -94,21 +98,20 @@ export default function App() {
           : 'Занятие добавлено'
       )
     },
-    [store, studentById]
+    [addLesson, studentById]
   )
 
   const handleDeleteLesson = useCallback(
     (id) => {
-      store.deleteLesson(id)
+      deleteLesson(id)
       setView((current) => backPast(current, (v) => v.name === 'lesson' && v.id === id))
     },
-    [store]
+    [deleteLesson]
   )
 
   const handleDeleteStudent = useCallback(
     (id) => {
-      const gone = new Set(store.lessons.filter((l) => l.studentId === id).map((l) => l.id))
-      store.deleteStudent(id)
+      const gone = new Set(deleteStudent(id))
       setView((current) =>
         backPast(
           current,
@@ -116,15 +119,15 @@ export default function App() {
         )
       )
     },
-    [store]
+    [deleteStudent]
   )
 
   const handleSetStatus = useCallback(
     (id, status) => {
-      store.setStatus(id, status)
+      setStatus(id, status)
       if (status === 'cancelled') setToast('Занятие отменено')
     },
-    [store]
+    [setStatus]
   )
 
   const currentLesson =

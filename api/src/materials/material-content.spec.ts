@@ -79,6 +79,28 @@ describe('parseContent', () => {
     ])
   })
 
+  it('убирает из условия знаки, которые ученик должен поставить, и оставляет их в ответе', () => {
+    const raw = JSON.stringify({
+      ...valid,
+      example: { task: 'Расставь знаки: Девочка[[,]] осторожно ступая по льду[[,]] дошла до берега.', solution: 'Девочка[[,]] осторожно ступая по льду[[,]] дошла.' },
+      homework: [
+        { task: 'Расставь знаки: Москва [[—]] столица России.', answer: null },
+        { task: 'Расставь знаки: Москва[[ — ]]столица России.', answer: null },
+        { task: 'Вставь буквы: кое[[-]]что, по[[-]]русски.', answer: null },
+      ],
+    })
+    const parsed = parseContent(raw)
+    expect(parsed?.example).toMatchObject({
+      task: 'Расставь знаки: Девочка осторожно ступая по льду дошла до берега.',
+      solution: 'Девочка, осторожно ступая по льду, дошла.',
+    })
+    expect(parsed?.homework.map(({ task, answer }) => ({ task, answer }))).toEqual([
+      { task: 'Расставь знаки: Москва столица России.', answer: 'Расставь знаки: Москва — столица России.' },
+      { task: 'Расставь знаки: Москва столица России.', answer: 'Расставь знаки: Москва — столица России.' },
+      { task: 'Вставь буквы: кое..что, по..русски.', answer: 'Вставь буквы: кое-что, по-русски.' },
+    ])
+  })
+
   it('итог проверки ответов из ответа модели не берёт', () => {
     const raw = JSON.stringify({
       ...valid,
@@ -105,6 +127,7 @@ describe('parseContent', () => {
       theory: [{ h: 'Углы', p: '∠A = ∠D = 50°. ∠B лежит напротив AC.', rule: 'AB ⊥ CD, MN∥KL', ex: 'Точка M ∈ AB' }],
     })
     expect(parseContent(raw)?.theory[0]).toEqual({
+      doubt: null,
       h: 'Углы',
       p: 'Угол A = угол D = 50°. Угол B лежит напротив AC.',
       rule: 'AB перпендикулярно CD, MN параллельно KL',
@@ -151,6 +174,19 @@ describe('coerceContent', () => {
       homework: [{ doubt: 'У проверки 6 Н, в ключе 5 Н.' }],
     })
     expect(coerceContent({ ...valid, check: 'что-то' })?.check).toBeNull()
+  })
+
+  it('сохраняет замечания проверки теории из базы, а из ответа модели не берёт', () => {
+    const stored = {
+      ...valid,
+      theory: [{ ...valid.theory[0], doubt: 'Правило шире, чем верно.' }],
+      theoryDoubt: 'Типичные ошибки: пример противоречит правилу.',
+    }
+    expect(coerceContent(stored)).toMatchObject({
+      theory: [{ doubt: 'Правило шире, чем верно.' }],
+      theoryDoubt: 'Типичные ошибки: пример противоречит правилу.',
+    })
+    expect(parseContent(JSON.stringify(stored))).toMatchObject({ theory: [{ doubt: null }], theoryDoubt: null })
   })
 })
 
@@ -319,5 +355,25 @@ describe('renderMaterialPdf', () => {
     const student = await renderMaterialPdf(base)
     const tutor = await renderMaterialPdf({ ...base, withAnswers: true })
     expect(pages(tutor)).toBe(pages(student) + 1)
+  })
+})
+
+describe('итоговая запись result', () => {
+  const raw = JSON.stringify({
+    title: 'Логарифмы',
+    theory: [{ h: 'Что это', p: 'Показатель степени.', rule: null, ex: null }],
+    mistakes: [],
+    example: { task: 'Реши уравнение log₃(x + 2) = 2.', solution: '1) x + 2 = 9. 2) x = 7.', result: 'x = 7' },
+    homework: [
+      { task: 'Реши уравнение log₂ x = 3.', tag: null, answer: 'x = 2³ = 8.', result: 'x = 8' },
+      { task: 'Докажи, что log₂ 8 = 3.', tag: null, answer: '2³ = 8.', result: null },
+    ],
+  })
+
+  it('доходит от модели до проверки', () => {
+    const content = parseContent(raw)
+    expect(content?.example.result).toBe('x = 7')
+    expect(content?.homework[0].result).toBe('x = 8')
+    expect(content?.homework[1]).not.toHaveProperty('result')
   })
 })
