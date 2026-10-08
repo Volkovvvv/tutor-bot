@@ -5,8 +5,7 @@ import { MonthSummary } from '../../../widgets/month-summary/index.js'
 import s from './MoneyPage.module.css'
 
 export default function MoneyPage({ students, lessons, onOpenStudent }) {
-  // Архивный ученик остаётся в списке, только если в этом месяце у него были занятия
-  const rows = monthByStudent(lessons, students).filter((r) => !r.student.archived || r.doneCount > 0)
+  const rows = monthByStudent(lessons, students)
 
   return (
     <Screen>

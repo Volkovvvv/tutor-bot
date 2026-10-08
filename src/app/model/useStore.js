@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { api, getAll, login } from '../../shared/api/client.js'
 import { haptic } from '../../shared/api/telegram.js'
 import {
@@ -29,9 +29,6 @@ function reportError(message) {
 }
 
 const POLL_MS = 15_000
-
-// С архивными: в списках их нет, но прошлые занятия должны знать имя ученика
-const STUDENTS_PATH = '/students?includeArchived=true'
 
 // Откат трогает только ту запись, что меняли: слепок всего списка затёр бы
 // правки, которые прошли, пока этот запрос был в пути.
@@ -80,7 +77,7 @@ export function useStore() {
       try {
         await login()
         const [studentsRes, lessonsRes, tutorRes] = await Promise.all([
-          getAll(STUDENTS_PATH),
+          getAll('/students'),
           getAll('/lessons'),
           api.get('/tutor'),
         ])
@@ -110,7 +107,7 @@ export function useStore() {
 
     const refresh = () => {
       if (document.hidden) return
-      getAll(STUDENTS_PATH)
+      getAll('/students')
         .then((res) => {
           const next = res.map(studentFromApi)
           // Ничего не изменилось — не перерисовываем приложение впустую
@@ -283,8 +280,7 @@ export function useStore() {
     })
   }, [])
 
-  // Удаление ученика на сервере отказывает, если у него есть занятия
-  // (см. StudentsService.remove) — тогда просим архивировать вместо удаления.
+  // Ученик удаляется вместе со всеми занятиями и материалами (каскад на сервере).
   // Возвращает id удалённых вместе с ним занятий: экран, открытый на одном
   // из них, нужно закрыть.
   const deleteStudent = useCallback((id) => {
@@ -297,11 +293,7 @@ export function useStore() {
     api.delete(`/students/${id}`).catch((e) => {
       setStudents(putBack(removedStudent))
       setLessons(putBack(removedLessons))
-      reportError(
-        e.status === 409
-          ? 'У ученика есть занятия — удалить его нельзя. Уберите его в архив с карточки ученика.'
-          : e.message
-      )
+      reportError(e.message)
     })
     return removedLessons.map(({ item }) => item.id)
   }, [])
@@ -343,37 +335,6 @@ export function useStore() {
       })
   }, [])
 
-  // В архив: ученик уходит из списков вместе с будущими занятиями и повтором
-  // «каждую неделю»; прошедшие занятия и деньги остаются (см. StudentsService.archive).
-  // Возвращает id убранных занятий: экран, открытый на одном из них, нужно закрыть.
-  const archiveStudent = useCallback((id) => {
-    const now = new Date()
-    const pad = (n) => String(n).padStart(2, '0')
-    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
-    const removed = lessonsRef.current.flatMap((item, index) =>
-      item.studentId === id && item.status === 'planned' && `${item.date} ${item.time}` > stamp ? [{ item, index }] : []
-    )
-    const gone = new Set(removed.map(({ item }) => item.id))
-    setStudents(patchItem(id, { archived: true }))
-    setLessons((list) => list.filter((l) => !gone.has(l.id)))
-    api.post(`/students/${id}/archive`).catch((e) => {
-      setStudents(patchItem(id, { archived: false }))
-      setLessons(putBack(removed))
-      reportError(e.message)
-    })
-    haptic()
-    return [...gone]
-  }, [])
-
-  const restoreStudent = useCallback((id) => {
-    setStudents(patchItem(id, { archived: false }))
-    api.post(`/students/${id}/restore`).catch((e) => {
-      setStudents(patchItem(id, { archived: true }))
-      reportError(e.message)
-    })
-    haptic()
-  }, [])
-
   // Правка карточки: имя, цена, класс. Цена на сервере — в копейках.
   const updateStudent = useCallback((id, patch) => {
     const before = studentsRef.current.find((s) => s.id === id)
@@ -394,14 +355,10 @@ export function useStore() {
     })
   }, [])
 
-  // Действующие ученики — для списков и выбора; allStudents — ещё и архивные
-  const active = useMemo(() => students.filter((s) => !s.archived), [students])
-
   return {
     ready,
     authError,
-    students: active,
-    allStudents: students,
+    students,
     lessons,
     profile,
     updateProfile,
@@ -410,8 +367,6 @@ export function useStore() {
     createAndInvite,
     inviteStudent,
     updateStudent,
-    archiveStudent,
-    restoreStudent,
     updateNotify,
     addLesson,
     updateLesson,

@@ -18,7 +18,6 @@ import {
   GroupRow,
   InfoList,
   InfoRow,
-  Note,
   PageTitle,
   Screen,
   Section,
@@ -34,8 +33,6 @@ export default function StudentPage({
   onOpenLesson,
   onAddLesson,
   onDelete,
-  onArchive,
-  onRestore,
   onNotify,
   onInvite,
   inviteLink,
@@ -43,8 +40,8 @@ export default function StudentPage({
   onUpdateStudent,
 }) {
   const [editing, setEditing] = useState(false)
-  // Архивация убирает будущие занятия — сначала спрашиваем
-  const [archiving, setArchiving] = useState(false)
+  // Удаление необратимо и уносит занятия с деньгами — сначала спрашиваем
+  const [confirming, setConfirming] = useState(false)
   if (!student) return null
 
   const { lessons: own, doneCount, owed } = studentLessons(lessons, student)
@@ -65,10 +62,6 @@ export default function StudentPage({
         </div>
       </div>
 
-      {student.archived ? (
-        <Note>Ученик в архиве: в списках его нет, история занятий и деньги сохранены.</Note>
-      ) : null}
-
       <InfoList>
         <InfoRow label="Цена за занятие">{formatMoney(student.price)}</InfoRow>
         <InfoRow label="Проведено всего">{doneCount}</InfoRow>
@@ -76,20 +69,16 @@ export default function StudentPage({
         {student.username ? <InfoRow label="Telegram" tone="link">@{student.username}</InfoRow> : null}
       </InfoList>
 
-      {student.archived ? null : (
-        <>
-          <InviteStudent
-            student={student}
-            onInvite={onInvite}
-            onNotify={onNotify}
-            inviteLink={inviteLink}
-          />
+      <InviteStudent
+        student={student}
+        onInvite={onInvite}
+        onNotify={onNotify}
+        inviteLink={inviteLink}
+      />
 
-          <EditStudentLevel student={student} onChange={onUpdateStudent} />
+      <EditStudentLevel student={student} onChange={onUpdateStudent} />
 
-          <NotifySettings student={student} onChange={onUpdateNotify} />
-        </>
-      )}
+      <NotifySettings student={student} onChange={onUpdateNotify} />
 
       <Section title="Ближайшие занятия">
         {upcoming.length === 0 ? (
@@ -126,45 +115,29 @@ export default function StudentPage({
         </Section>
       ) : null}
 
-      {student.archived ? (
-        <Actions>
-          <Button onClick={() => onRestore(student.id)}>Вернуть из архива</Button>
-        </Actions>
-      ) : (
-        <Actions>
-          <Button onClick={() => onAddLesson(student.id)}>+ Добавить занятие</Button>
-          <ContactStudent student={student} upcoming={upcoming} owed={owed} onNotify={onNotify} />
-          <Button variant="secondary" onClick={() => setEditing(true)}>Изменить имя и цену</Button>
-          {/* Удалить насовсем можно только ученика без занятий; с занятиями — архив, чтобы не потерять деньги */}
-          {own.length === 0 ? (
-            <Button variant="danger" onClick={() => onDelete(student.id)}>Удалить ученика</Button>
-          ) : (
-            <Button variant="danger" onClick={() => setArchiving(true)}>Убрать в архив</Button>
-          )}
-        </Actions>
-      )}
+      <Actions>
+        <Button onClick={() => onAddLesson(student.id)}>+ Добавить занятие</Button>
+        <ContactStudent student={student} upcoming={upcoming} owed={owed} onNotify={onNotify} />
+        <Button variant="secondary" onClick={() => setEditing(true)}>Изменить имя и цену</Button>
+        <Button variant="danger" onClick={() => setConfirming(true)}>Удалить ученика</Button>
+      </Actions>
 
       {editing ? (
         <EditStudentSheet student={student} onSave={onUpdateStudent} onClose={() => setEditing(false)} />
       ) : null}
 
-      {archiving ? (
+      {confirming ? (
         <Sheet
-          title="Убрать в архив?"
-          subtitle={`${student.name} исчезнет из списков. Будущие занятия удалятся, повтор «каждую неделю» остановится. Прошедшие занятия и деньги останутся, ученика можно вернуть.`}
-          onClose={() => setArchiving(false)}
+          title="Удалить ученика?"
+          subtitle={
+            own.length > 0
+              ? `${student.name} и все занятия с ним (${own.length}) исчезнут вместе с материалами уроков и деньгами в отчётах. Вернуть не получится.`
+              : `${student.name} исчезнет из списка. Вернуть не получится.`
+          }
+          onClose={() => setConfirming(false)}
         >
-          <Button
-            variant="danger"
-            className={s.confirm}
-            onClick={() => {
-              setArchiving(false)
-              onArchive(student.id)
-            }}
-          >
-            Убрать в архив
-          </Button>
-          <Button variant="secondary" onClick={() => setArchiving(false)}>Оставить</Button>
+          <Button variant="danger" className={s.confirm} onClick={() => onDelete(student.id)}>Удалить</Button>
+          <Button variant="secondary" onClick={() => setConfirming(false)}>Не удалять</Button>
         </Sheet>
       ) : null}
     </Screen>

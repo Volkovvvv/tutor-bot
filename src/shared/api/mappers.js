@@ -40,8 +40,6 @@ export function studentFromApi(s) {
     price: Math.round(s.price / 100),
     tgId: null,
     username: null,
-    // В архиве: в списках не показывается, но имя нужно прошлым занятиям
-    archived: Boolean(s.archivedAt),
     source: SOURCE_FROM_API[s.source] ?? 'manual',
     inviteStatus: INVITE_STATUS_FROM_API[s.inviteStatus] ?? 'none',
     // Код приглашения сервер не хранит на карточке — только на активном

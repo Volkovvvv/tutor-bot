@@ -71,8 +71,7 @@ export default function App() {
 
   const hideToast = useCallback(() => setToast(''), [])
 
-  // С архивными: у прошедшего занятия ученик может быть уже в архиве
-  const studentById = useMemo(() => indexById(store.allStudents), [store.allStudents])
+  const studentById = useMemo(() => indexById(store.students), [store.students])
 
   const open = useCallback((next) => setView((current) => openView(current, next)), [])
   const openLesson = useCallback((id) => open({ name: 'lesson', id }), [open])
@@ -81,7 +80,7 @@ export default function App() {
 
   // Из store берём отдельные функции, а не сам объект: он новый на каждый
   // рендер, и зависеть от него значило бы пересоздавать обработчики каждый раз
-  const { addStudent, addLesson, addSeries, stopSeries, deleteLesson, deleteStudent, archiveStudent, setStatus } = store
+  const { addStudent, addLesson, addSeries, stopSeries, deleteLesson, deleteStudent, setStatus } = store
 
   const handleAddStudent = useCallback(
     (input) => {
@@ -136,17 +135,6 @@ export default function App() {
       )
     },
     [deleteStudent]
-  )
-
-  // После архивации остаёмся на карточке: с неё же ученика можно вернуть.
-  // Закрываем только экраны его удалённых будущих занятий.
-  const handleArchiveStudent = useCallback(
-    (id) => {
-      const gone = new Set(archiveStudent(id))
-      setView((current) => backPast(current, (v) => v.name === 'lesson' && gone.has(v.id)))
-      setToast('Ученик в архиве. Будущие занятия убраны, история осталась')
-    },
-    [archiveStudent]
   )
 
   const handleSetStatus = useCallback(
@@ -207,7 +195,6 @@ export default function App() {
       {view.name === 'today' ? (
         <TodayPage
           students={store.students}
-          allStudents={store.allStudents}
           lessons={store.lessons}
           onOpenLesson={openLesson}
           onAddLesson={() => setSheet({ date: todayISO() })}
@@ -220,7 +207,7 @@ export default function App() {
 
       {view.name === 'calendar' ? (
         <CalendarPage
-          students={store.allStudents}
+          students={store.students}
           lessons={store.lessons}
           date={calendarDate}
           onSelectDate={setCalendarDate}
@@ -242,7 +229,7 @@ export default function App() {
 
       {view.name === 'money' ? (
         <MoneyPage
-          students={store.allStudents}
+          students={store.students}
           lessons={store.lessons}
           onOpenStudent={openStudent}
         />
@@ -257,8 +244,6 @@ export default function App() {
           onOpenLesson={openLesson}
           onAddLesson={(studentId) => setSheet({ date: calendarDate, studentId })}
           onDelete={handleDeleteStudent}
-          onArchive={handleArchiveStudent}
-          onRestore={store.restoreStudent}
           onNotify={setToast}
           onInvite={store.inviteStudent}
           inviteLink={store.inviteLinks.get(view.id)}

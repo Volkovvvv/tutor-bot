@@ -103,7 +103,7 @@ export default function AddLessonSheet({ students, lessons, date, studentId, onS
             </button>
           ))}
         </div>
-        <label className={s.custom}>
+        <label className={s.customTime}>
           <span>Другое время</span>
           <Input
             type="time"

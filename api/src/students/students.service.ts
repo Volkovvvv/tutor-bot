@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common'
+import { Injectable, Logger, NotFoundException } from '@nestjs/common'
 import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
 import { ReminderPlanner } from '../reminders/reminder-planner.service'
@@ -142,24 +142,11 @@ export class StudentsService {
   async archive(tutorId: string, id: string): Promise<StudentView> {
     await this.assertOwned(tutorId, id)
 
-    const now = new Date()
-    // Вместе с карточкой уходит всё, что ещё не случилось: будущие занятия
-    // и повтор «каждую неделю». Прошедшее остаётся — это история и деньги.
-    const [student] = await this.prisma.$transaction([
-      this.prisma.student.update({
-        where: { id },
-        data: { archivedAt: now },
-        select: STUDENT_SELECT,
-      }),
-      this.prisma.lessonSeries.updateMany({
-        where: { studentId: id, endsAt: null },
-        data: { endsAt: now },
-      }),
-      this.prisma.lesson.deleteMany({
-        where: { studentId: id, status: 'PLANNED', startsAt: { gt: now } },
-      }),
-    ])
-    return student
+    return this.prisma.student.update({
+      where: { id },
+      data: { archivedAt: new Date() },
+      select: STUDENT_SELECT,
+    })
   }
 
   async restore(tutorId: string, id: string): Promise<StudentView> {
@@ -184,20 +171,12 @@ export class StudentsService {
   }
 
   /**
-   * Полное удаление — только для ученика без занятий: карточку,
-   * заведённую по ошибке, надо уметь убрать совсем. Если занятия есть,
-   * remove откажет и предложит архивацию.
+   * Удаление насовсем, вместе с занятиями, сериями и материалами уроков
+   * (каскад в схеме). Архивация в приложении не используется: репетитору
+   * нужна одна понятная кнопка, а о потере истории его предупреждает экран.
    */
   async remove(tutorId: string, id: string): Promise<{ deleted: true }> {
     await this.assertOwned(tutorId, id)
-
-    const lessons = await this.prisma.lesson.count({ where: { studentId: id } })
-    if (lessons > 0) {
-      throw new ConflictException(
-        'У ученика есть занятия — используйте архивацию, чтобы не потерять историю',
-      )
-    }
-
     await this.prisma.student.delete({ where: { id } })
     return { deleted: true }
   }

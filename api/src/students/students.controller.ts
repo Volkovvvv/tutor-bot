@@ -81,7 +81,7 @@ export class StudentsController {
     return this.students.restore(user.tutorId, id)
   }
 
-  /** Удаление насовсем — разрешено только пока нет занятий. */
+  /** Удаление насовсем, вместе с занятиями ученика. */
   @Delete(':id')
   remove(
     @CurrentUser() user: AuthUser,

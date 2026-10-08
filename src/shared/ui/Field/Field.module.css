@@ -43,3 +43,19 @@
   background-repeat: no-repeat;
   background-position: right 18px center;
 }
+
+/* Дата и время. С appearance: none пустое поле в iOS схлопывается по высоте
+   и ширине, а значение встаёт по центру — задаём размер и выравнивание сами */
+input[type='time'].control,
+input[type='date'].control {
+  display: block;
+  width: 100%;
+  min-width: 0;
+  min-height: 50px;
+  line-height: 1.2;
+}
+
+input[type='time'].control::-webkit-date-and-time-value,
+input[type='date'].control::-webkit-date-and-time-value {
+  text-align: left;
+}
