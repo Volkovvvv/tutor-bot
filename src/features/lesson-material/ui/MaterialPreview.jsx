@@ -3,14 +3,14 @@ import s from './MaterialPreview.module.css'
 
 // Материал листом PDF — таким его получит ученик. Ответы и пометки
 // проверки видит только репетитор: в файле ученика их нет.
-// pill, meta и footer — шапка и подпись листа, как в самом PDF
-function MaterialPreview({ material, pill, meta, footer }) {
+// pill, meta, footer и sign — шапка, подпись и знак листа, как в самом PDF
+function MaterialPreview({ material, pill, meta, footer, sign = '÷' }) {
   const [showAnswers, setShowAnswers] = useState(false)
   const hasAnswers = material.homework.some((h) => h.answer)
 
   return (
     <article className={s.sheet}>
-      <header className={s.head}>
+      <header className={s.head} data-sign={sign}>
         {pill ? <span className={s.pill}>{pill}</span> : null}
         <h3 className={s.topic}>{material.title ?? material.topic}</h3>
         {meta ? <div className={s.meta}>{meta}</div> : null}

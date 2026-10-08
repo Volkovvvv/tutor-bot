@@ -1,6 +1,7 @@
 import { join } from 'node:path'
 import PDFDocument from 'pdfkit'
 import type { MaterialContent } from './material-content'
+import { subjectSign } from './subjects'
 
 // dist/materials → api/assets/fonts; из ts-jest — src/materials, путь тот же
 const FONTS = join(__dirname, '..', '..', 'assets', 'fonts')
@@ -159,13 +160,16 @@ export function renderMaterialPdf(input: PdfInput): Promise<Buffer> {
   numbered(input.content.homework.map((h) => ({ text: h.task, tag: h.tag })))
 
   // ─── Подпись ───
-  ensure(40)
-  doc.y += 12
-  const lineY = doc.y
+  // Не помещается под заданиями — уходит в нижнее поле, а не на пустую страницу.
+  // Поле на время убираем: иначе pdfkit сам перенесёт текст на новую страницу.
+  const lineY = Math.min(doc.y + 12, doc.page.height - 32)
+  const marginBottom = doc.page.margins.bottom
+  doc.page.margins.bottom = 0
   doc.moveTo(x, lineY).lineTo(x + width, lineY).lineWidth(1).strokeColor(C.soft).stroke()
   doc.font('body-semi').fontSize(9.5).fillColor(C.muted)
   doc.text(input.tutorLine, x, lineY + 10, { width: width * 0.65, lineBreak: false, ellipsis: true })
   doc.text('Вопросы — в Telegram', x, lineY + 10, { width, align: 'right', lineBreak: false })
+  doc.page.margins.bottom = marginBottom
 
   // ─── Ответы: отдельной страницей, чтобы её было легко не отдавать ───
   if (input.withAnswers) {
@@ -214,8 +218,11 @@ function drawHeader(doc: PDFKit.PDFDocument, input: PdfInput, x: number, width: 
   // Декоративный знак, как в макете
   doc.save()
   doc.rotate(-12, { origin: [W - 70, 50] })
-  doc.font('display-semi').fontSize(84).fillColor('#ffffff').fillOpacity(0.28)
-  doc.text('÷', W - 110, 6, { lineBreak: false })
+  // Знак свой у предмета; правый край — там же, где у «÷» из макета
+  const sign = subjectSign(input.subject)
+  const signRight = W - 110 + doc.font('display-semi').fontSize(84).widthOfString('÷')
+  doc.font(sign.font).fontSize(84).fillColor('#ffffff').fillOpacity(0.28)
+  doc.text(sign.text, signRight - doc.widthOfString(sign.text), 6, { lineBreak: false })
   doc.restore()
 
   // Плашка «Физика · 9 класс»

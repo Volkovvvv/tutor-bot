@@ -31,7 +31,7 @@
 }
 
 .head::after {
-  content: '÷';
+  content: attr(data-sign);
   position: absolute;
   right: 16px;
   top: 4px;

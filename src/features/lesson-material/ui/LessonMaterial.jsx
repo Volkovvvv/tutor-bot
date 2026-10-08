@@ -3,7 +3,7 @@ import { levelLabel } from '../../../entities/student/index.js'
 import { api, API_URL } from '../../../shared/api/client.js'
 import { downloadFile } from '../../../shared/api/telegram.js'
 import { cx } from '../../../shared/lib/cx.js'
-import { SUBJECTS } from '../../../shared/lib/subjects.js'
+import { SUBJECTS, subjectSign } from '../../../shared/lib/subjects.js'
 import {
   Button,
   Field,
@@ -334,6 +334,7 @@ export default function LessonMaterial({
             pill={[material.subject, level].filter(Boolean).join(' · ')}
             meta={[student?.name, date].filter(Boolean).join(' · ')}
             footer={tutorName ? `${tutorName} · репетитор` : 'Репетитор'}
+            sign={subjectSign(material.subject)}
           />
           {sent ? <Note>PDF без ответов — в чате с ботом. Перешлите его ученику.</Note> : null}
           <MaterialActions
