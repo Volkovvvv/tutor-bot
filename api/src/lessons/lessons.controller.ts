@@ -65,8 +65,8 @@ export class LessonsController {
   // пользователь не должен выбрать лимит ключа.
   @Throttle({ default: { limit: 20, ttl: 60 * 60_000 } })
   @Post('import/recognize')
-  recognize(@Body() dto: RecognizeScheduleDto): Promise<{ rows: ImportRow[] }> {
-    return this.scheduleImport.recognize(dto)
+  recognize(@CurrentUser() user: AuthUser, @Body() dto: RecognizeScheduleDto): Promise<{ rows: ImportRow[] }> {
+    return this.scheduleImport.recognize(user.tutorId, dto)
   }
 
   /** Расписание на недели вперёд одним запросом: по одному занятию оно упёрлось бы в лимит частоты. */

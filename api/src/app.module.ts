@@ -8,6 +8,7 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { BotModule } from './bot/bot.module'
 import { UserThrottlerGuard } from './common/user-throttler.guard'
 import { validateEnv } from './config/env.validation'
+import { EventsModule } from './events/events.module'
 import { HealthModule } from './health/health.module'
 import { InvitesModule } from './invites/invites.module'
 import { LessonsModule } from './lessons/lessons.module'
@@ -34,6 +35,7 @@ import { TutorsModule } from './tutors/tutors.module'
     StudentsModule,
     LessonsModule,
     MaterialsModule,
+    EventsModule,
     InvitesModule,
     BotModule,
     RemindersModule,

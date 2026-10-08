@@ -103,6 +103,12 @@ class EnvVars {
   @IsOptional()
   AI_CHECK_EFFORT?: string
 
+  // Telegram ID администратора: ему доступна команда бота /stats и приходит фидбэк.
+  // Без него статистика копится, но смотреть её негде.
+  @IsString()
+  @IsOptional()
+  ADMIN_TG_ID?: string
+
   // Модель, читающая расписание с фото; не задана — та же, что пишет материалы.
   @IsString()
   @IsOptional()

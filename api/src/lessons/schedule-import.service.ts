@@ -1,4 +1,5 @@
 import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
+import { EventsService } from '../events/events.service'
 import { AiService } from '../materials/ai.service'
 import type { RecognizeScheduleDto } from './dto/import-schedule.dto'
 import { buildImportMessages, type ImportRow, parseImportRows } from './schedule-import'
@@ -19,9 +20,12 @@ const ATTEMPTS = 2
 export class ScheduleImportService {
   private readonly logger = new Logger(ScheduleImportService.name)
 
-  constructor(private readonly ai: AiService) {}
+  constructor(
+    private readonly ai: AiService,
+    private readonly events: EventsService,
+  ) {}
 
-  async recognize(dto: RecognizeScheduleDto): Promise<{ rows: ImportRow[] }> {
+  async recognize(tutorId: string, dto: RecognizeScheduleDto): Promise<{ rows: ImportRow[] }> {
     const text = dto.text?.trim()
     if (!dto.image && !text) {
       throw new BadRequestException('Нужно фото расписания или его текст')
@@ -31,12 +35,28 @@ export class ScheduleImportService {
     }
 
     const messages = buildImportMessages({ image: dto.image, text })
-    for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
-      const raw = await this.ai.askImporter(messages)
-      const rows = raw ? parseImportRows(raw) : null
-      if (rows) return { rows }
-      this.logger.warn(`Расписание не разобрано (попытка ${attempt}): ${raw?.slice(0, 300)}`)
+    const startedAt = Date.now()
+    try {
+      for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
+        const raw = await this.ai.askImporter(messages)
+        const rows = raw ? parseImportRows(raw) : null
+        if (rows) {
+          await this.events.track(tutorId, 'import_recognized', {
+            kind: dto.image ? 'photo' : 'text',
+            rows: rows.length,
+            unsure: rows.filter((r) => r.unsure).length,
+            ms: Date.now() - startedAt,
+          })
+          return { rows }
+        }
+        this.logger.warn(`Расписание не разобрано (попытка ${attempt}): ${raw?.slice(0, 300)}`)
+      }
+    } catch (e) {
+      // Сбой модели или сети — тоже «не получилось»
+      await this.events.track(tutorId, 'import_failed', { kind: dto.image ? 'photo' : 'text', error: true })
+      throw e
     }
+    await this.events.track(tutorId, 'import_failed', { kind: dto.image ? 'photo' : 'text' })
     throw new ServiceUnavailableException('Не получилось прочитать расписание. Попробуйте ещё раз')
   }
 }

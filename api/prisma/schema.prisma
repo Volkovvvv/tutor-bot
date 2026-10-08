@@ -33,6 +33,8 @@ model User {
   // Таймзона решает, во сколько по-настоящему наступает «16:00»
   // и когда планировщику слать напоминание.
   timezone  String   @default("Europe/Moscow")
+  // Когда человек последний раз открывал мини-апп: «заходил ли вообще».
+  lastSeenAt DateTime?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -80,6 +82,9 @@ model Tutor {
   lessons   Lesson[]
   series    LessonSeries[]
   materials LessonMaterial[]
+  events    Event[]
+  feedback  Feedback[]
+  surveys   Survey[]
 
   @@map("tutors")
 }
@@ -283,6 +288,64 @@ model LessonMaterial {
 
   @@index([tutorId])
   @@map("lesson_materials")
+}
+
+// ─── Статистика пилота ───────────────────────────────────────────────────
+
+// Журнал событий: что репетитор делал с материалами.
+//
+// props — только числа, коды и короткие метки (предмет, модель, доли).
+// Темы, тексты материалов и имена учеников сюда не попадают никогда:
+// их фильтрует src/events/event-names.ts.
+model Event {
+  id      String @id @default(uuid())
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  name  String
+  props Json   @default("{}")
+
+  createdAt DateTime @default(now())
+
+  @@index([tutorId, createdAt])
+  @@index([name, createdAt])
+  @@map("events")
+}
+
+// Сообщение репетитора разработчику («Написать разработчику»).
+model Feedback {
+  id      String @id @default(uuid())
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  text   String
+  // Экран, с которого написали
+  screen String?
+
+  createdAt DateTime @default(now())
+
+  @@index([tutorId, createdAt])
+  @@map("feedback")
+}
+
+// Вопрос, который бот задал репетитору сам: «отправили материал ученику?»,
+// «расстроитесь ли, если пропадёт». Уникальный ключ не даст спросить дважды.
+model Survey {
+  id      String @id @default(uuid())
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  // FORWARDED | MISS_YOU
+  kind String
+  // К чему относится вопрос: id занятия для FORWARDED, пусто для MISS_YOU
+  ref  String @default("")
+
+  askedAt DateTime  @default(now())
+  answer  String?
+
+  @@unique([tutorId, kind, ref])
+  @@index([tutorId, kind, askedAt])
+  @@map("surveys")
 }
 
 // ─── Напоминания ─────────────────────────────────────────────────────────

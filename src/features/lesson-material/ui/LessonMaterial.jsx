@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { levelLabel } from '../../../entities/student/index.js'
 import { api, API_URL } from '../../../shared/api/client.js'
 import { downloadFile } from '../../../shared/api/telegram.js'
+import { track } from '../../../shared/api/track.js'
 import { cx } from '../../../shared/lib/cx.js'
 import { SUBJECTS, subjectSign } from '../../../shared/lib/subjects.js'
 import {
@@ -18,6 +19,7 @@ import {
 import MaterialActions from './MaterialActions.jsx'
 import MaterialEditor from './MaterialEditor.jsx'
 import MaterialPreview from './MaterialPreview.jsx'
+import MaterialRating from './MaterialRating.jsx'
 import s from './LessonMaterial.module.css'
 
 const OTHER = '__other'
@@ -95,6 +97,9 @@ export default function LessonMaterial({
   // 'generate' | 'save' | 'send' | 'pdf' | 'pdf-answers' | null — что сейчас выполняется
   const [busy, setBusy] = useState(null)
   const [sent, setSent] = useState(false)
+  // Пробный лимит исчерпан, и репетитор уже нажал «Хочу больше материалов»
+  const [limitHit, setLimitHit] = useState(false)
+  const [wantedMore, setWantedMore] = useState(false)
   // Какой шаг показывать, пока ИИ пишет
   const [stage, setStage] = useState(0)
 
@@ -168,6 +173,8 @@ export default function LessonMaterial({
       // Новый предмет запоминается в профиле: в следующий раз он в списке
       if (!subjects.includes(subjectName)) onAddSubject(subjectName)
     } catch (e) {
+      // 403 — пробный лимит исчерпан (см. MaterialsService.generate)
+      if (e.status === 403) setLimitHit(true)
       reportError(e.message)
     } finally {
       setBusy(null)
@@ -209,6 +216,12 @@ export default function LessonMaterial({
     } finally {
       setBusy(null)
     }
+  }
+
+  const wantMore = () => {
+    track('upgrade_interest', { lessonId })
+    setWantedMore(true)
+    reportError('Записали! Напишем, когда материалов станет больше')
   }
 
   const startEditing = () => {
@@ -301,6 +314,15 @@ export default function LessonMaterial({
             </button>
           ) : null}
 
+          {limitHit ? (
+            <>
+              <Note>Пробный лимит материалов исчерпан. Готовые остаются: их можно править и скачивать.</Note>
+              <Button variant="secondary" onClick={wantMore} disabled={wantedMore}>
+                {wantedMore ? 'Записали ✓' : 'Хочу больше материалов'}
+              </Button>
+            </>
+          ) : null}
+
           <span className={s.hint}>
             ИИ напишет короткую теорию, разберёт пример и подберёт {count} {count === 4 ? 'задачи' : 'задач'} на дом.
             PDF оформится в вашем стиле, с вашим именем.
@@ -339,6 +361,7 @@ export default function LessonMaterial({
                 : 'PDF без ответов — в чате с ботом. Перешлите его ученику.'}
             </Note>
           ) : null}
+          <MaterialRating key={`${lessonId}:${material.createdAt}`} lessonId={lessonId} version={material.createdAt} />
           <MaterialActions
             busy={busy}
             sent={sent}

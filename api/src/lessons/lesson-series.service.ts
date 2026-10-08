@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { Cron, CronExpression } from '@nestjs/schedule'
 import type { Prisma } from '@prisma/client'
+import { EventsService } from '../events/events.service'
 import { PrismaService } from '../prisma/prisma.service'
 import { ReminderPlanner } from '../reminders/reminder-planner.service'
 import type { CreateSeriesDto } from './dto/series.dto'
@@ -22,6 +23,7 @@ export class LessonSeriesService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly reminders: ReminderPlanner,
+    private readonly events: EventsService,
   ) {}
 
   async create(tutorId: string, dto: CreateSeriesDto): Promise<{ created: LessonView[]; skipped: number }> {
@@ -76,6 +78,7 @@ export class LessonSeriesService {
         select: { id: true, studentId: true, duration: true },
       })
       created.push(...(await this.generate(tutorId, series, priceOf.get(item.studentId)!, dates)))
+      await this.events.track(tutorId, 'series_created', { lessons: dates.length })
     }
 
     return { created, skipped }

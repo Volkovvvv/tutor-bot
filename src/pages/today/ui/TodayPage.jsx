@@ -35,7 +35,7 @@ const FIRST_STEPS = [
   'Добавьте занятие в календарь, и оно появится здесь.',
 ]
 
-export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson, onImportSchedule, onInvite, onAddStudent }) {
+export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson, onImportSchedule, onInvite, onAddStudent, onFeedback }) {
   const now = useNow()
   const studentById = indexById(students)
   const today = lessonsOn(lessons, now.date)
@@ -71,6 +71,9 @@ export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson
             Загрузить расписание с фото
           </Button>
         </div>
+        <Button className={s.firstManual} variant="secondary" onClick={onFeedback}>
+          Написать разработчику
+        </Button>
       </Screen>
     )
   }
@@ -139,6 +142,10 @@ export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson
       {today.length === 0 ? (
         <Button onClick={onAddLesson}>+ Добавить занятие</Button>
       ) : null}
+
+      <Button className={s.firstManual} variant="secondary" onClick={onFeedback}>
+        Написать разработчику
+      </Button>
     </Screen>
   )
 }

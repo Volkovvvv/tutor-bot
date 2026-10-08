@@ -80,6 +80,7 @@ export class AuthService {
           lastName: tg.lastName ?? null,
           username: tg.username ?? null,
           photoUrl: tg.photoUrl ?? null,
+          lastSeenAt: new Date(),
           ...(timezone ? { timezone } : {}),
         },
         create: {
@@ -88,6 +89,7 @@ export class AuthService {
           lastName: tg.lastName ?? null,
           username: tg.username ?? null,
           photoUrl: tg.photoUrl ?? null,
+          lastSeenAt: new Date(),
           ...(timezone ? { timezone } : {}),
         },
       })

@@ -29,6 +29,7 @@ export default function LessonPage({
   onTogglePaid,
   onDelete,
   onStopSeries,
+  onFeedback,
   subjects = [],
   onAddSubject,
   country,
@@ -85,6 +86,7 @@ export default function LessonPage({
       />
 
       <Actions>
+        <Button variant="secondary" onClick={onFeedback}>Написать разработчику</Button>
         <Button variant="danger" onClick={() => setConfirming(true)}>Удалить занятие</Button>
       </Actions>
 

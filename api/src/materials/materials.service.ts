@@ -11,6 +11,8 @@ import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import type { Prisma } from '@prisma/client'
 import { BotService } from '../bot/bot.service'
+import { editShare } from '../events/material-edit'
+import { EventsService } from '../events/events.service'
 import { subjectDative } from '../invites/invite-message'
 import { PrismaService } from '../prisma/prisma.service'
 import { AiService } from './ai.service'
@@ -41,6 +43,24 @@ import {
   templateContent,
 } from './material-content'
 import { renderMaterialPdf } from './material-pdf'
+import { canonicalSubject } from './subjects'
+
+// В журнал событий предмет идёт только из этого списка: введённый руками
+// может оказаться чем угодно, в том числе именем ученика.
+const TRACKED_SUBJECTS = new Set([
+  'Математика',
+  'Русский язык',
+  'Английский',
+  'Физика',
+  'Химия',
+  'Биология',
+  'Информатика',
+])
+
+function trackedSubject(subject: string): string {
+  const name = canonicalSubject(subject)
+  return TRACKED_SUBJECTS.has(name) ? name : 'другое'
+}
 
 const MATERIAL_SELECT = {
   lessonId: true,
@@ -128,6 +148,7 @@ export class MaterialsService {
     private readonly ai: AiService,
     private readonly bot: BotService,
     private readonly jwt: JwtService,
+    private readonly events: EventsService,
     config: ConfigService,
   ) {
     this.limit = materialsLimit(config.get('AI_MATERIALS_LIMIT'))
@@ -144,15 +165,19 @@ export class MaterialsService {
 
   /** Собрать материалы заново; прежние для этого урока заменяются. */
   async generate(tutorId: string, lessonId: string, dto: GenerateMaterialDto): Promise<MaterialView> {
+    const startedAt = Date.now()
     const lesson = await this.prisma.lesson.findFirst({
       where: { id: lessonId, tutorId },
       select: {
+        // Был ли материал: повторная сборка — сигнал, что прежний не устроил
+        material: { select: { lessonId: true } },
         student: { select: { grade: true } },
         tutor: { select: { country: true, materialsGenerated: true } },
       },
     })
     if (!lesson) throw new NotFoundException('Занятие не найдено')
     if (this.limit !== null && lesson.tutor.materialsGenerated >= this.limit) {
+      await this.events.track(tutorId, 'limit_hit', { used: lesson.tutor.materialsGenerated })
       throw new ForbiddenException(
         `Пробный лимит исчерпан: ИИ собрал ${this.limit} материалов. Готовые материалы остаются — их можно править и скачивать`,
       )
@@ -188,8 +213,22 @@ export class MaterialsService {
       update: { ...data, createdAt: new Date() },
       select: MATERIAL_SELECT,
     })
+    const regenerated = lesson.material !== null
+    await this.events.track(tutorId, 'material_generated', {
+      lessonId,
+      subject: trackedSubject(subject),
+      ...(lesson.student.grade ? { grade: lesson.student.grade } : {}),
+      count: content.homework.length,
+      model,
+      ms: Date.now() - startedAt,
+      regenerated,
+    })
+    if (regenerated) await this.events.track(tutorId, 'material_regenerated', { lessonId })
+
     // В фоне: репетитор не ждёт проверку, пометки появятся чуть позже
-    if (toCheck) void this.checkMaterial(lessonId, row.createdAt, subject, lesson.student.grade, topic, content)
+    if (toCheck) {
+      void this.checkMaterial(tutorId, lessonId, row.createdAt, subject, lesson.student.grade, topic, content)
+    }
     return toView(row)
   }
 
@@ -199,6 +238,7 @@ export class MaterialsService {
    * Обе проверки идут одновременно; если не удалась одна, пометки другой всё равно сохраняются.
    */
   private async checkMaterial(
+    tutorId: string,
     lessonId: string,
     createdAt: Date,
     subject: string,
@@ -228,6 +268,12 @@ export class MaterialsService {
       await this.prisma.lessonMaterial.updateMany({
         where: { lessonId, createdAt },
         data: { content: next as unknown as Prisma.InputJsonValue },
+      })
+      await this.events.track(tutorId, 'material_checked', {
+        lessonId,
+        ok: next.check === 'done',
+        answerDoubts: notes?.filter(Boolean).length ?? 0,
+        theoryDoubts: findings?.length ?? 0,
       })
     } catch (e) {
       this.logger.error(`Итог проверки материала не записан: ${(e as Error).message}`)
@@ -291,12 +337,15 @@ export class MaterialsService {
     const prev = stored ? coerceContent(stored.content) : null
     if (!prev) throw new NotFoundException('Материалы не найдены')
     const content = carryDoubts(prev, edited)
+    const share = editShare(prev, edited)
     // updateMany, а не update: tutorId в условии не даёт править чужой материал
     const { count } = await this.prisma.lessonMaterial.updateMany({
       where: { lessonId, tutorId },
       data: { content: content as unknown as Prisma.InputJsonValue },
     })
     if (count === 0) throw new NotFoundException('Материалы не найдены')
+
+    if (share > 0) await this.events.track(tutorId, 'material_edited', { lessonId, share })
 
     const row = await this.prisma.lessonMaterial.findUniqueOrThrow({
       where: { lessonId },
@@ -306,7 +355,8 @@ export class MaterialsService {
   }
 
   async remove(tutorId: string, lessonId: string): Promise<{ deleted: true }> {
-    await this.prisma.lessonMaterial.deleteMany({ where: { lessonId, tutorId } })
+    const { count } = await this.prisma.lessonMaterial.deleteMany({ where: { lessonId, tutorId } })
+    if (count > 0) await this.events.track(tutorId, 'material_deleted', { lessonId })
     return { deleted: true }
   }
 
@@ -322,6 +372,7 @@ export class MaterialsService {
     })
     if (!row) throw new NotFoundException('Материалы не найдены')
 
+    await this.events.track(tutorId, 'pdf_downloaded', { lessonId, answers: withAnswers })
     const payload: PdfLinkPayload = { typ: 'material-pdf', lid: lessonId, tid: tutorId, ans: withAnswers }
     const token = await this.jwt.signAsync(payload, { expiresIn: PDF_LINK_TTL })
     return { token, filename: pdfFilename(row.topic, row.lesson.student.name, withAnswers) }
@@ -368,6 +419,7 @@ export class MaterialsService {
           : 'Не удалось отправить PDF. Попробуйте ещё раз',
       )
     }
+    await this.events.track(tutorId, 'pdf_sent', { lessonId, answers: withAnswers })
     return { sent: true }
   }
 

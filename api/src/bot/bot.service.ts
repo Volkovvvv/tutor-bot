@@ -1,6 +1,7 @@
 import { Injectable, Logger, OnModuleDestroy, OnModuleInit } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
-import { Bot, GrammyError, HttpError, InputFile } from 'grammy'
+import { Bot, GrammyError, HttpError, InlineKeyboard, InputFile } from 'grammy'
+import { StatsService } from '../events/stats.service'
 import { InvitesService } from '../invites/invites.service'
 
 /** Итог попытки отправки — понадобится планировщику для журнала. */
@@ -11,19 +12,36 @@ export interface SendResult {
   error?: string
 }
 
+/** Кнопка под сообщением: data вернётся в callback_query. */
+export interface InlineButton {
+  text: string
+  data: string
+}
+
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name)
   private readonly bot: Bot
   private readonly mode: string
+  /** Telegram ID администратора: /stats и фидбэк — только ему; null — не задан. */
+  private readonly adminId: number | null
 
   constructor(
     private readonly invites: InvitesService,
+    private readonly stats: StatsService,
     private readonly config: ConfigService,
   ) {
     this.bot = new Bot(config.getOrThrow<string>('BOT_TOKEN'))
     this.mode = config.get<string>('BOT_MODE') ?? 'polling'
+    const admin = Number(config.get('ADMIN_TG_ID'))
+    this.adminId = Number.isInteger(admin) && admin > 0 ? admin : null
+    if (!this.adminId) this.logger.warn('ADMIN_TG_ID не задан — /stats и фидбэк репетиторов недоступны')
     this.registerHandlers()
+  }
+
+  /** Бот подключён к Telegram и может писать; при BOT_MODE=off — нет. */
+  get canSend(): boolean {
+    return this.mode !== 'off'
   }
 
   /** Экземпляр для webhook-колбэка; планировщик пользуется sendMessage. */
@@ -42,7 +60,9 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         // Пришёл без кода — просто объясняем, что делать.
         await ctx.reply(
           'Привет! Этот бот присылает напоминания о занятиях.\n\n' +
-            'Чтобы подключиться, откройте ссылку-приглашение от своего репетитора.',
+            'Чтобы подключиться, откройте ссылку-приглашение от своего репетитора.\n\n' +
+            'Приложение собирает обезличенную статистику использования: сколько материалов создано и скачано. ' +
+            'Темы, тексты и имена в неё не попадают.',
         )
         return
       }
@@ -68,6 +88,23 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
         `Готово, ${result.studentName}! Напоминания о занятиях будут приходить сюда.`,
       )
       this.logger.log(`Ученик подключён: ${result.studentId}`)
+    })
+
+    // Сводка пилота — только администратору. Остальным бот отвечает как на любое
+    // другое сообщение: наличие команды не должно быть видно посторонним.
+    this.bot.command('stats', async (ctx) => {
+      if (!this.adminId || ctx.from?.id !== this.adminId) {
+        await ctx.reply('Я только присылаю напоминания о занятиях и не умею отвечать на сообщения.')
+        return
+      }
+      const username = ctx.match?.trim().replace(/^@/, '')
+      try {
+        const text = username ? await this.stats.timeline(username) : await this.stats.summary()
+        await ctx.reply(text ?? `Репетитора @${username} нет`)
+      } catch (e) {
+        this.logger.error(`Сводка не собрана: ${(e as Error).message}`)
+        await ctx.reply('Не удалось собрать сводку, подробности в логе')
+      }
     })
 
     // Любое другое сообщение: бот не диалоговый, объясняем это прямо.
@@ -96,14 +133,16 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
    * сотни отправок, и падение на одной заблокировавшей бота остановило бы
    * рассылку остальным.
    */
-  async sendMessage(tgId: bigint, text: string): Promise<SendResult> {
+  async sendMessage(tgId: bigint, text: string, buttons?: InlineButton[]): Promise<SendResult> {
     // Локально бот выключен: не пишем реальным людям из тестовой базы.
     if (this.mode === 'off') {
       this.logger.debug(`BOT_MODE=off, сообщение для ${tgId} не отправлено: ${text}`)
       return { ok: false, error: 'BOT_MODE=off' }
     }
     try {
-      await this.bot.api.sendMessage(Number(tgId), text)
+      const keyboard = buttons ? new InlineKeyboard() : undefined
+      for (const b of buttons ?? []) keyboard?.text(b.text, b.data)
+      await this.bot.api.sendMessage(Number(tgId), text, keyboard ? { reply_markup: keyboard } : undefined)
       return { ok: true }
     } catch (e) {
       if (e instanceof GrammyError) {
@@ -113,6 +152,12 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
       return { ok: false, error: (e as Error).message }
     }
+  }
+
+  /** Сообщение администратору (фидбэк репетиторов). Без ADMIN_TG_ID — молча ничего. */
+  async notifyAdmin(text: string): Promise<SendResult> {
+    if (!this.adminId) return { ok: false, error: 'ADMIN_TG_ID не задан' }
+    return this.sendMessage(BigInt(this.adminId), text)
   }
 
   /** Отправка файла. Как и sendMessage, не бросает исключений. */

@@ -13,6 +13,7 @@ import { AddStudentForm } from '../../features/add-student/index.js'
 import { AddLessonSheet } from '../../features/add-lesson/index.js'
 import { ImportFromTelegram } from '../../features/import-from-telegram/index.js'
 import { ImportSchedule } from '../../features/import-schedule/index.js'
+import { SendFeedback } from '../../features/send-feedback/index.js'
 import { Onboarding } from '../../features/onboarding/index.js'
 import { useStore } from '../model/useStore.js'
 import { backLabel, backPast, backTarget, LIST_VIEWS, openView, TABS } from '../model/navigation.js'
@@ -26,6 +27,8 @@ export default function App() {
   const [calendarDate, setCalendarDate] = useState(todayISO)
   // Шторка «Новое занятие»: { date, studentId? } или null
   const [sheet, setSheet] = useState(null)
+  // Шторка «Написать разработчику»: экран, с которого её открыли, или null
+  const [feedback, setFeedback] = useState(null)
 
   // initTelegram() вызывается в main.jsx до первого рендера — здесь
   // остаётся только тема, которая может меняться в процессе работы.
@@ -195,6 +198,7 @@ export default function App() {
           onOpenLesson={openLesson}
           onAddLesson={() => setSheet({ date: todayISO() })}
           onImportSchedule={() => open({ name: 'importSchedule' })}
+          onFeedback={() => setFeedback('today')}
           onInvite={() => open({ name: 'importStudents' })}
           onAddStudent={() => open({ name: 'addStudent' })}
         />
@@ -258,6 +262,7 @@ export default function App() {
           onTogglePaid={store.togglePaid}
           onDelete={handleDeleteLesson}
           onStopSeries={handleStopSeries}
+          onFeedback={() => setFeedback('lesson')}
           subjects={store.profile?.subjects ?? []}
           onAddSubject={(name) => {
             const mine = store.profile?.subjects ?? []
@@ -313,6 +318,18 @@ export default function App() {
           studentId={sheet.studentId}
           onSave={handleAddLesson}
           onClose={() => setSheet(null)}
+        />
+      ) : null}
+
+      {feedback ? (
+        <SendFeedback
+          screen={feedback}
+          onClose={() => setFeedback(null)}
+          onSent={(message) => {
+            setFeedback(null)
+            setToast(message)
+          }}
+          onError={setToast}
         />
       ) : null}
 
