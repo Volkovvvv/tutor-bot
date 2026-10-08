@@ -142,11 +142,24 @@ export class StudentsService {
   async archive(tutorId: string, id: string): Promise<StudentView> {
     await this.assertOwned(tutorId, id)
 
-    return this.prisma.student.update({
-      where: { id },
-      data: { archivedAt: new Date() },
-      select: STUDENT_SELECT,
-    })
+    const now = new Date()
+    // Вместе с карточкой уходит всё, что ещё не случилось: будущие занятия
+    // и повтор «каждую неделю». Прошедшее остаётся — это история и деньги.
+    const [student] = await this.prisma.$transaction([
+      this.prisma.student.update({
+        where: { id },
+        data: { archivedAt: now },
+        select: STUDENT_SELECT,
+      }),
+      this.prisma.lessonSeries.updateMany({
+        where: { studentId: id, endsAt: null },
+        data: { endsAt: now },
+      }),
+      this.prisma.lesson.deleteMany({
+        where: { studentId: id, status: 'PLANNED', startsAt: { gt: now } },
+      }),
+    ])
+    return student
   }
 
   async restore(tutorId: string, id: string): Promise<StudentView> {

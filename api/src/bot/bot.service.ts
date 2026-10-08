@@ -25,6 +25,8 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly mode: string
   /** Telegram ID администратора: /stats и фидбэк — только ему; null — не задан. */
   private readonly adminId: number | null
+  /** Адрес мини-аппа для кнопки «Открыть кабинет»; null — кнопки нет. */
+  private readonly appUrl: string | null
 
   constructor(
     private readonly invites: InvitesService,
@@ -36,7 +38,21 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const admin = Number(config.get('ADMIN_TG_ID'))
     this.adminId = Number.isInteger(admin) && admin > 0 ? admin : null
     if (!this.adminId) this.logger.warn('ADMIN_TG_ID не задан — /stats и фидбэк репетиторов недоступны')
+    const appUrl = config.get<string>('MINI_APP_URL')?.trim() ?? ''
+    // Telegram принимает в кнопке только https
+    this.appUrl = appUrl.startsWith('https://') ? appUrl : null
     this.registerHandlers()
+  }
+
+  /** Как репетитору попасть в приложение: кнопкой под сообщением или кнопкой меню. */
+  private openHint(): string {
+    return this.appUrl ? 'Откройте кабинет кнопкой ниже.' : 'Откройте кабинет кнопкой меню рядом с полем ввода.'
+  }
+
+  private openKeyboard(): { reply_markup: InlineKeyboard } | undefined {
+    return this.appUrl
+      ? { reply_markup: new InlineKeyboard().webApp('Открыть кабинет', this.appUrl) }
+      : undefined
   }
 
   /** Бот подключён к Telegram и может писать; при BOT_MODE=off — нет. */
@@ -57,12 +73,16 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       if (!from) return
 
       if (!payload) {
-        // Пришёл без кода — просто объясняем, что делать.
+        // Без кода приходят и репетиторы, и ученики без ссылки: кто перед нами,
+        // бот не знает, поэтому говорит обоим, что делать.
         await ctx.reply(
-          'Привет! Этот бот присылает напоминания о занятиях.\n\n' +
-            'Чтобы подключиться, откройте ссылку-приглашение от своего репетитора.\n\n' +
+          'Привет! Это помощник репетитора.\n\n' +
+            `Вы репетитор? ${this.openHint()} В нём расписание, ученики и материалы к урокам: ` +
+            'теория и домашка в PDF.\n\n' +
+            'Вы ученик? Откройте ссылку-приглашение от своего репетитора, и напоминания о занятиях будут приходить сюда.\n\n' +
             'Приложение собирает обезличенную статистику использования: сколько материалов создано и скачано. ' +
             'Темы, тексты и имена в неё не попадают.',
+          this.openKeyboard(),
         )
         return
       }
@@ -109,7 +129,10 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     // Любое другое сообщение: бот не диалоговый, объясняем это прямо.
     this.bot.on('message', async (ctx) => {
-      await ctx.reply('Я только присылаю напоминания о занятиях и не умею отвечать на сообщения.')
+      await ctx.reply(
+        `Я не умею отвечать на сообщения. ${this.openHint()} Написать разработчику можно прямо в нём.`,
+        this.openKeyboard(),
+      )
     })
 
     // Ошибки не должны валить процесс: бот принимает ввод

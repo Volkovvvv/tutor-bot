@@ -20,7 +20,14 @@ import s from './Onboarding.module.css'
 const FEATURES = [
   ['01', 'Конспект в PDF', 'После урока ИИ соберёт теорию и домашку в фирменный PDF.'],
   ['02', 'Напоминания', 'Бот сам напишет ученику за день и за час до занятия.'],
-  ['03', 'Календарь и деньги', 'Расписание по часам и заработок за месяц.'],
+  ['03', 'Календарь и деньги', 'Расписание переносится с фото, заработок считается сам.'],
+]
+
+// Шаг «Расписание с фото»: что произойдёт, по порядку
+const IMPORT_PLAN = [
+  'Сфотографируйте расписание из блокнота или вставьте его текстом',
+  'Проверьте учеников, дни и время — всё можно поправить',
+  'Занятия встанут в календарь и будут повторяться каждую неделю',
 ]
 
 const REMINDERS = [
@@ -28,7 +35,7 @@ const REMINDERS = [
   ['notifyBeforeMinutes', 'За 1 час', 'Повтор перед началом', 60],
 ]
 
-const STEPS = 5
+const STEPS = 6
 
 // Шаг «Домашка за минуту»: лист собирается на глазах, по разделу за такт.
 // Такт 0 — ещё не запускали, 4 — готово; подпись — что «пишется» сейчас.
@@ -39,11 +46,11 @@ const DEMO_PLAN = ['Теория по теме', 'Разбор примера', 
 
 /**
  * Знакомство с приложением при первом входе: предметы, пример PDF
- * и подпись на нём, напоминания по умолчанию, первый ученик. Каждый шаг
+ * и подпись на нём, напоминания по умолчанию, расписание с фото, первый ученик. Каждый шаг
  * сохраняется на сервер перед переходом дальше — закрыв приложение
  * на середине, репетитор продолжит с заполненными полями.
  */
-export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
+export default function Onboarding({ profile, onSave, onInvite, onNotify, onImportSchedule }) {
   const [step, setStep] = useState(0)
   const [busy, setBusy] = useState(false)
 
@@ -121,6 +128,12 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
     return name.trim() ? save({ displayName: name.trim() }, 3) : setStep(3)
   }
 
+  // Расписание с фото заводит и учеников, и занятия — знакомство на этом
+  // заканчивается, а шаг с приглашением остаётся на потом: оно есть в карточке ученика
+  const importSchedule = async () => {
+    if (await finish()) onImportSchedule()
+  }
+
   const invite = async () => {
     setBusy(true)
     const result = await onInvite({ name: studentName.trim(), price: Number(price) })
@@ -156,6 +169,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
           4
         ),
     },
+    { label: 'Загрузить расписание', disabled: false, onClick: importSchedule },
     { label: 'Пригласить', disabled: !studentName.trim() || !(Number(price) > 0), onClick: invite },
   ][step]
 
@@ -220,7 +234,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
               брендированный под вас PDF.
             </p>
           </Stack>
-          <Field label="Подпишем лист вашим именем">
+          <Field label="Подпишем материал вашим именем">
             <Input
               value={name}
               onChange={(e) => setName(e.target.value)}
@@ -309,6 +323,30 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
       {step === 4 ? (
         <>
           <Stack gap={8}>
+            <PageTitle>Расписание с фото</PageTitle>
+            <p className={s.text}>
+              Не нужно вносить занятия по одному. Покажите приложению своё расписание — оно перенесёт
+              его в календарь само.
+            </p>
+          </Stack>
+          <div className={s.plan}>
+            {IMPORT_PLAN.map((label, i) => (
+              <div key={label} className={s.planRow}>
+                <span className={s.planNum}>{i + 1}</span>
+                <span>{label}</span>
+              </div>
+            ))}
+          </div>
+          <div className={s.glass}>
+            Подойдёт фото страницы блокнота, скриншот заметок или таблицы. Загрузить расписание
+            можно и позже — кнопка есть в календаре.
+          </div>
+        </>
+      ) : null}
+
+      {step === 5 ? (
+        <>
+          <Stack gap={8}>
             <PageTitle>Пригласите первого ученика</PageTitle>
             <p className={s.text}>Так ученик увидит приглашение в Telegram.</p>
           </Stack>
@@ -349,6 +387,11 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
           </button>
         ) : null}
         {step === 4 ? (
+          <Button variant="secondary" onClick={() => setStep(5)} disabled={busy}>
+            Позже, сначала ученик
+          </Button>
+        ) : null}
+        {step === 5 ? (
           <Button variant="secondary" onClick={() => finish()} disabled={busy}>
             Сделаю позже
           </Button>

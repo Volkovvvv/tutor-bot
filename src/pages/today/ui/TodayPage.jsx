@@ -35,9 +35,10 @@ const FIRST_STEPS = [
   'Добавьте занятие в календарь, и оно появится здесь.',
 ]
 
-export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson, onImportSchedule, onInvite, onAddStudent, onFeedback }) {
+export default function TodayPage({ students, allStudents, lessons, onOpenLesson, onAddLesson, onImportSchedule, onInvite, onAddStudent, onFeedback }) {
   const now = useNow()
-  const studentById = indexById(students)
+  // Имена — и архивных учеников: их сегодняшнее занятие могло уже пройти
+  const studentById = indexById(allStudents ?? students)
   const today = lessonsOn(lessons, now.date)
   const next = nextLesson(today, now.minutes)
   const active = today.filter((l) => l.status !== 'cancelled')

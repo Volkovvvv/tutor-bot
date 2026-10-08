@@ -252,10 +252,18 @@ describe('buildMessages', () => {
 })
 
 describe('materialsLimit', () => {
-  it('читает лимит из настройки, пустое и ноль — без лимита', () => {
+  it('читает лимит из настройки', () => {
     expect(materialsLimit('5')).toBe(5)
     expect(materialsLimit(15)).toBe(15)
-    for (const off of [undefined, '', '0', 0, '-3', '2.5', 'много']) expect(materialsLimit(off)).toBeNull()
+  })
+
+  it('не задан или задан с ошибкой — пробный лимит', () => {
+    for (const unset of [undefined, null, '', '-3', '2.5', 'много']) expect(materialsLimit(unset)).toBe(10)
+  })
+
+  it('ноль снимает лимит', () => {
+    expect(materialsLimit('0')).toBeNull()
+    expect(materialsLimit(0)).toBeNull()
   })
 })
 

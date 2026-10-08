@@ -1,8 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { api, getAll, login } from '../../shared/api/client.js'
 import { haptic } from '../../shared/api/telegram.js'
 import {
   lessonFromApi,
+  lessonPatchToApi,
   lessonToApi,
   notifyToApi,
   statusToApi,
@@ -28,6 +29,9 @@ function reportError(message) {
 }
 
 const POLL_MS = 15_000
+
+// С архивными: в списках их нет, но прошлые занятия должны знать имя ученика
+const STUDENTS_PATH = '/students?includeArchived=true'
 
 // Откат трогает только ту запись, что меняли: слепок всего списка затёр бы
 // правки, которые прошли, пока этот запрос был в пути.
@@ -76,7 +80,7 @@ export function useStore() {
       try {
         await login()
         const [studentsRes, lessonsRes, tutorRes] = await Promise.all([
-          getAll('/students'),
+          getAll(STUDENTS_PATH),
           getAll('/lessons'),
           api.get('/tutor'),
         ])
@@ -106,7 +110,7 @@ export function useStore() {
 
     const refresh = () => {
       if (document.hidden) return
-      getAll('/students')
+      getAll(STUDENTS_PATH)
         .then((res) => {
           const next = res.map(studentFromApi)
           // Ничего не изменилось — не перерисовываем приложение впустую
@@ -236,6 +240,17 @@ export function useStore() {
     }
   }, [])
 
+  // Перенос занятия, длительность и цена: { date, time, duration, price }
+  const updateLesson = useCallback((id, patch) => {
+    const before = lessonsRef.current.find((l) => l.id === id)
+    setLessons(patchItem(id, patch))
+    api.patch(`/lessons/${id}`, lessonPatchToApi(patch)).catch((e) => {
+      if (before) setLessons(patchItem(id, fieldsOf(before, patch)))
+      reportError(e.message)
+    })
+    haptic()
+  }, [])
+
   const setStatus = useCallback((id, status) => {
     const before = lessonsRef.current.find((l) => l.id === id)
     setLessons(patchItem(id, { status }))
@@ -284,7 +299,7 @@ export function useStore() {
       setLessons(putBack(removedLessons))
       reportError(
         e.status === 409
-          ? 'У ученика есть занятия — удаление недоступно. Обратитесь к разработчику для архивации.'
+          ? 'У ученика есть занятия — удалить его нельзя. Уберите его в архив с карточки ученика.'
           : e.message
       )
     })
@@ -328,11 +343,43 @@ export function useStore() {
       })
   }, [])
 
-  // Класс и цель ученика. Патч уходит на сервер как есть: поля те же.
+  // В архив: ученик уходит из списков вместе с будущими занятиями и повтором
+  // «каждую неделю»; прошедшие занятия и деньги остаются (см. StudentsService.archive).
+  // Возвращает id убранных занятий: экран, открытый на одном из них, нужно закрыть.
+  const archiveStudent = useCallback((id) => {
+    const now = new Date()
+    const pad = (n) => String(n).padStart(2, '0')
+    const stamp = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())} ${pad(now.getHours())}:${pad(now.getMinutes())}`
+    const removed = lessonsRef.current.flatMap((item, index) =>
+      item.studentId === id && item.status === 'planned' && `${item.date} ${item.time}` > stamp ? [{ item, index }] : []
+    )
+    const gone = new Set(removed.map(({ item }) => item.id))
+    setStudents(patchItem(id, { archived: true }))
+    setLessons((list) => list.filter((l) => !gone.has(l.id)))
+    api.post(`/students/${id}/archive`).catch((e) => {
+      setStudents(patchItem(id, { archived: false }))
+      setLessons(putBack(removed))
+      reportError(e.message)
+    })
+    haptic()
+    return [...gone]
+  }, [])
+
+  const restoreStudent = useCallback((id) => {
+    setStudents(patchItem(id, { archived: false }))
+    api.post(`/students/${id}/restore`).catch((e) => {
+      setStudents(patchItem(id, { archived: true }))
+      reportError(e.message)
+    })
+    haptic()
+  }, [])
+
+  // Правка карточки: имя, цена, класс. Цена на сервере — в копейках.
   const updateStudent = useCallback((id, patch) => {
     const before = studentsRef.current.find((s) => s.id === id)
     setStudents(patchItem(id, patch))
-    api.patch(`/students/${id}`, patch).catch((e) => {
+    const body = patch.price === undefined ? patch : { ...patch, price: Math.round(Number(patch.price) * 100) }
+    api.patch(`/students/${id}`, body).catch((e) => {
       if (before) setStudents(patchItem(id, fieldsOf(before, patch)))
       reportError(e.message)
     })
@@ -347,10 +394,14 @@ export function useStore() {
     })
   }, [])
 
+  // Действующие ученики — для списков и выбора; allStudents — ещё и архивные
+  const active = useMemo(() => students.filter((s) => !s.archived), [students])
+
   return {
     ready,
     authError,
-    students,
+    students: active,
+    allStudents: students,
     lessons,
     profile,
     updateProfile,
@@ -359,8 +410,11 @@ export function useStore() {
     createAndInvite,
     inviteStudent,
     updateStudent,
+    archiveStudent,
+    restoreStudent,
     updateNotify,
     addLesson,
+    updateLesson,
     addSeries,
     stopSeries,
     importSchedule,

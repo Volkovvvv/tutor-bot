@@ -43,6 +43,8 @@ npm run start:dev            # http://localhost:3000/api
 | `BOT_PUBLIC_URL` | только для webhook: публичный адрес API |
 | `BOT_WEBHOOK_SECRET` | только для webhook, ≥16 символов |
 | `ADMIN_TG_ID` | Telegram ID администратора: команда `/stats` и фидбэк репетиторов — только ему |
+| `MINI_APP_URL` | адрес мини-аппа (https): кнопка «Открыть кабинет» в ответе бота на `/start` |
+| `AI_MATERIALS_LIMIT` | сколько материалов ИИ соберёт одному репетитору; не задан — 10, `0` — без лимита; администратору не считается |
 
 `.env` в гите нет и быть не должно — только `.env.example`.
 

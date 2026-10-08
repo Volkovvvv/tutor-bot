@@ -142,6 +142,8 @@ export class MaterialsService {
   private readonly logger = new Logger(MaterialsService.name)
   /** Сколько материалов ИИ соберёт одному репетитору; null — без лимита. */
   private readonly limit: number | null
+  /** Администратору лимит не считается: он собирает материалы, проверяя сервис. */
+  private readonly adminTgId: string | null
 
   constructor(
     private readonly prisma: PrismaService,
@@ -152,6 +154,7 @@ export class MaterialsService {
     config: ConfigService,
   ) {
     this.limit = materialsLimit(config.get('AI_MATERIALS_LIMIT'))
+    this.adminTgId = String(config.get('ADMIN_TG_ID') ?? '').trim() || null
   }
 
   async list(tutorId: string, lessonId?: string): Promise<MaterialView[]> {
@@ -172,11 +175,12 @@ export class MaterialsService {
         // Был ли материал: повторная сборка — сигнал, что прежний не устроил
         material: { select: { lessonId: true } },
         student: { select: { grade: true } },
-        tutor: { select: { country: true, materialsGenerated: true } },
+        tutor: { select: { country: true, materialsGenerated: true, user: { select: { tgId: true } } } },
       },
     })
     if (!lesson) throw new NotFoundException('Занятие не найдено')
-    if (this.limit !== null && lesson.tutor.materialsGenerated >= this.limit) {
+    const isAdmin = this.adminTgId !== null && String(lesson.tutor.user.tgId) === this.adminTgId
+    if (this.limit !== null && !isAdmin && lesson.tutor.materialsGenerated >= this.limit) {
       await this.events.track(tutorId, 'limit_hit', { used: lesson.tutor.materialsGenerated })
       throw new ForbiddenException(
         `Пробный лимит исчерпан: ИИ собрал ${this.limit} материалов. Готовые материалы остаются — их можно править и скачивать`,

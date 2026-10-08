@@ -40,6 +40,8 @@ export function studentFromApi(s) {
     price: Math.round(s.price / 100),
     tgId: null,
     username: null,
+    // В архиве: в списках не показывается, но имя нужно прошлым занятиям
+    archived: Boolean(s.archivedAt),
     source: SOURCE_FROM_API[s.source] ?? 'manual',
     inviteStatus: INVITE_STATUS_FROM_API[s.inviteStatus] ?? 'none',
     // Код приглашения сервер не хранит на карточке — только на активном
@@ -111,6 +113,15 @@ export function lessonToApi({ studentId, date, time, duration }) {
   // репетитор ставит занятие в своём времени.
   const local = new Date(`${date}T${time}:00`)
   return { studentId, startsAt: local.toISOString(), ...(duration ? { duration } : {}) }
+}
+
+// Правка занятия: время — как в lessonToApi, цена — в копейки
+export function lessonPatchToApi({ date, time, duration, price }) {
+  return {
+    startsAt: new Date(`${date}T${time}:00`).toISOString(),
+    duration,
+    price: Math.round(Number(price) * 100),
+  }
 }
 
 export function statusToApi(status) {

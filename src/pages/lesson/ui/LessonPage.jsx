@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { lessonEnd, lessonPrice } from '../../../entities/lesson/index.js'
 import { levelLabel } from '../../../entities/student/index.js'
+import { EditLessonSheet } from '../../../features/edit-lesson/index.js'
 import { EditLessonStatus } from '../../../features/edit-lesson-status/index.js'
 import { LessonMaterial } from '../../../features/lesson-material/index.js'
 import { dayMonth, dayTitle } from '../../../shared/lib/date.js'
@@ -27,6 +28,7 @@ export default function LessonPage({
   onOpenStudent,
   onSetStatus,
   onTogglePaid,
+  onUpdate,
   onDelete,
   onStopSeries,
   onFeedback,
@@ -38,6 +40,7 @@ export default function LessonPage({
 }) {
   // Удаление необратимо и уносит материалы урока — сначала спрашиваем
   const [confirming, setConfirming] = useState(false)
+  const [editing, setEditing] = useState(false)
   if (!lesson) return null
 
   const name = student?.name ?? 'Удалённый ученик'
@@ -86,9 +89,19 @@ export default function LessonPage({
       />
 
       <Actions>
+        <Button variant="secondary" onClick={() => setEditing(true)}>Перенести или изменить цену</Button>
         <Button variant="secondary" onClick={onFeedback}>Написать разработчику</Button>
         <Button variant="danger" onClick={() => setConfirming(true)}>Удалить занятие</Button>
       </Actions>
+
+      {editing ? (
+        <EditLessonSheet
+          lesson={lesson}
+          price={lessonPrice(lesson, student)}
+          onSave={onUpdate}
+          onClose={() => setEditing(false)}
+        />
+      ) : null}
 
       {confirming ? (
         <Sheet

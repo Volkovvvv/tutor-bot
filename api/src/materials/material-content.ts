@@ -54,10 +54,19 @@ export const HOMEWORK_COUNTS = [4, 6, 10] as const
 export const DEFAULT_HOMEWORK_COUNT = 6
 export const WISHES_MAX = 500
 
-/** Лимит материалов на репетитора из настройки AI_MATERIALS_LIMIT; null — без лимита. */
+/** Пробный лимит, пока AI_MATERIALS_LIMIT не задан: столько материалов получает репетитор на тест. */
+export const DEFAULT_MATERIALS_LIMIT = 10
+
+/**
+ * Лимит материалов на репетитора из настройки AI_MATERIALS_LIMIT; null — без лимита.
+ * Не задан или задан с ошибкой — пробный лимит: опечатка в настройке не должна
+ * открыть всем безлимит. Снять лимит можно только явно — нулём.
+ */
 export function materialsLimit(raw: unknown): number | null {
+  if (raw === undefined || raw === null || raw === '') return DEFAULT_MATERIALS_LIMIT
   const limit = Number(raw)
-  return Number.isInteger(limit) && limit > 0 ? limit : null
+  if (limit === 0) return null
+  return Number.isInteger(limit) && limit > 0 ? limit : DEFAULT_MATERIALS_LIMIT
 }
 
 export const REASONING_EFFORTS = ['low', 'medium', 'high', 'none'] as const
