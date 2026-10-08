@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { api, login } from '../../shared/api/client.js'
+import { api, getAll, login } from '../../shared/api/client.js'
 import { haptic } from '../../shared/api/telegram.js'
 import {
   lessonFromApi,
@@ -76,8 +76,8 @@ export function useStore() {
       try {
         await login()
         const [studentsRes, lessonsRes, tutorRes] = await Promise.all([
-          api.get('/students'),
-          api.get('/lessons'),
+          getAll('/students'),
+          getAll('/lessons'),
           api.get('/tutor'),
         ])
         if (cancelled) return
@@ -106,8 +106,7 @@ export function useStore() {
 
     const refresh = () => {
       if (document.hidden) return
-      api
-        .get('/students')
+      getAll('/students')
         .then((res) => {
           const next = res.map(studentFromApi)
           // Ничего не изменилось — не перерисовываем приложение впустую
@@ -171,6 +170,70 @@ export function useStore() {
       .then((created) => setLessons((list) => [...list, lessonFromApi(created)]))
       .catch((e) => reportError(e.message))
     haptic()
+  }, [])
+
+  // Занятие «каждую неделю»: сервер создаёт серию и сразу занятия на 12 недель
+  // вперёд, дальше продлевает сам (см. api/src/lessons/lesson-series.service.ts).
+  const addSeries = useCallback((input) => {
+    api
+      .post('/lessons/series', { series: [lessonToApi(input)] })
+      .then((res) => {
+        setLessons((list) => [...list, ...res.created.map(lessonFromApi)])
+        if (res.created.length === 0) reportError('Такое занятие каждую неделю уже есть')
+      })
+      .catch((e) => reportError(e.message))
+    haptic()
+  }, [])
+
+  // «Удалить это и все следующие»: серия обрывается на этом занятии.
+  // Проведённые и отменённые остаются — это уже история.
+  // Возвращает id удалённых занятий: экран, открытый на одном из них, нужно закрыть.
+  const stopSeries = useCallback((lesson) => {
+    const from = `${lesson.date} ${lesson.time}`
+    const removed = lessonsRef.current.flatMap((item, index) =>
+      item.seriesId === lesson.seriesId && item.status === 'planned' && `${item.date} ${item.time}` >= from
+        ? [{ item, index }]
+        : []
+    )
+    const gone = new Set(removed.map(({ item }) => item.id))
+    setLessons((list) => list.filter((l) => !gone.has(l.id)))
+    const { startsAt } = lessonToApi(lesson)
+    api.delete(`/lessons/series/${lesson.seriesId}?from=${encodeURIComponent(startsAt)}`).catch((e) => {
+      setLessons(putBack(removed))
+      reportError(e.message)
+    })
+    haptic()
+    return [...gone]
+  }, [])
+
+  // Импорт расписания: сначала карточки новых учеников, потом все занятия
+  // одним запросом. Не оптимистично — экран импорта ждёт результата.
+  //
+  // newStudents: [{ key, name, price }], lessons: [{ studentId | studentKey, date, time, duration? }].
+  // repeat — занятия повторяются каждую неделю: lessons тогда — первые занятия серий.
+  // known — id учеников, созданных прошлой попыткой: если занятия тогда
+  // не сохранились, повтор не должен завести тех же учеников второй раз.
+  // Возвращает { ok, studentIds, created, skipped }.
+  const importSchedule = useCallback(async ({ newStudents, lessons: planned, repeat = false, known = {} }) => {
+    haptic()
+    const studentIds = { ...known }
+    try {
+      for (const st of newStudents) {
+        if (studentIds[st.key]) continue
+        const created = studentFromApi(await api.post('/students', studentToApi(st)))
+        studentIds[st.key] = created.id
+        setStudents((list) => [...list, created])
+      }
+      const items = planned.map((l) => lessonToApi({ ...l, studentId: l.studentId ?? studentIds[l.studentKey] }))
+      const res = repeat
+        ? await api.post('/lessons/series', { series: items })
+        : await api.post('/lessons/bulk', { lessons: items })
+      setLessons((list) => [...list, ...res.created.map(lessonFromApi)])
+      return { ok: true, studentIds, created: res.created.length, skipped: res.skipped }
+    } catch (e) {
+      reportError(e.message)
+      return { ok: false, studentIds, created: 0, skipped: 0 }
+    }
   }, [])
 
   const setStatus = useCallback((id, status) => {
@@ -298,6 +361,9 @@ export function useStore() {
     updateStudent,
     updateNotify,
     addLesson,
+    addSeries,
+    stopSeries,
+    importSchedule,
     setStatus,
     togglePaid,
     deleteLesson,

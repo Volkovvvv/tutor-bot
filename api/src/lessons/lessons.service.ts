@@ -1,13 +1,14 @@
 import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { type Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
-import { RemindersService } from '../reminders/reminders.service'
+import { ReminderPlanner } from '../reminders/reminder-planner.service'
 import type { CreateLessonDto } from './dto/create-lesson.dto'
+import type { BulkLessonsDto } from './dto/import-schedule.dto'
 import type { ListLessonsDto } from './dto/list-lessons.dto'
 import type { SummaryQueryDto } from './dto/summary.dto'
 import type { UpdateLessonDto } from './dto/update-lesson.dto'
 
-const LESSON_SELECT = {
+export const LESSON_SELECT = {
   id: true,
   studentId: true,
   startsAt: true,
@@ -16,6 +17,7 @@ const LESSON_SELECT = {
   status: true,
   paidAt: true,
   note: true,
+  seriesId: true,
   createdAt: true,
   student: { select: { id: true, name: true } },
 } satisfies Prisma.LessonSelect
@@ -66,7 +68,7 @@ export class LessonsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly reminders: RemindersService,
+    private readonly reminders: ReminderPlanner,
   ) {}
 
   async list(tutorId: string, query: ListLessonsDto): Promise<LessonView[]> {
@@ -82,7 +84,7 @@ export class LessonsService {
         ...(query.from || query.to ? { startsAt: range } : {}),
       },
       select: LESSON_SELECT,
-      orderBy: { startsAt: 'asc' },
+      orderBy: [{ startsAt: 'asc' }, { id: 'asc' }],
       skip: query.skip ?? 0,
       take: query.take ?? 100,
     })
@@ -128,6 +130,64 @@ export class LessonsService {
     await this.safePlan(lesson.id)
 
     return lesson
+  }
+
+  /**
+   * Создаёт сразу много занятий — расписание на недели вперёд.
+   *
+   * Повторный импорт того же расписания не должен удваивать занятия:
+   * те, что у ученика уже стоят на это же время, пропускаются.
+   */
+  async createMany(tutorId: string, dto: BulkLessonsDto): Promise<{ created: LessonView[]; skipped: number }> {
+    const studentIds = [...new Set(dto.lessons.map((l) => l.studentId))]
+    // Та же проверка, что в create: все ученики — этого репетитора.
+    const students = await this.prisma.student.findMany({
+      where: { id: { in: studentIds }, tutorId },
+      select: { id: true, price: true, archivedAt: true },
+    })
+    if (students.length !== studentIds.length) throw new NotFoundException('Ученик не найден')
+    if (students.some((s) => s.archivedAt)) {
+      throw new BadRequestException('Ученик в архиве — восстановите карточку')
+    }
+    const priceOf = new Map(students.map((s) => [s.id, s.price]))
+
+    const key = (studentId: string, startsAt: Date) => `${studentId}|${startsAt.getTime()}`
+    const existing = await this.prisma.lesson.findMany({
+      where: {
+        tutorId,
+        studentId: { in: studentIds },
+        startsAt: { in: dto.lessons.map((l) => new Date(l.startsAt)) },
+        // На месте отменённого занятия новое ставить можно
+        status: { not: 'CANCELLED' },
+      },
+      select: { studentId: true, startsAt: true },
+    })
+    const taken = new Set(existing.map((l) => key(l.studentId, l.startsAt)))
+
+    const data: Prisma.LessonCreateManyInput[] = []
+    for (const l of dto.lessons) {
+      const startsAt = new Date(l.startsAt)
+      const k = key(l.studentId, startsAt)
+      if (taken.has(k)) continue
+      // Заодно отсекает повторы внутри самого запроса
+      taken.add(k)
+      data.push({
+        tutorId,
+        studentId: l.studentId,
+        startsAt,
+        duration: l.duration ?? 60,
+        price: l.price ?? priceOf.get(l.studentId)!,
+        note: l.note?.trim() ?? null,
+      })
+    }
+
+    const skipped = dto.lessons.length - data.length
+    if (data.length === 0) return { created: [], skipped }
+
+    const created = await this.prisma.lesson.createManyAndReturn({ data, select: LESSON_SELECT })
+    for (const lesson of created) await this.safePlan(lesson.id)
+
+    return { created, skipped }
   }
 
   async update(tutorId: string, id: string, dto: UpdateLessonDto): Promise<LessonView> {

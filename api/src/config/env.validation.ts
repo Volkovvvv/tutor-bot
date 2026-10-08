@@ -53,6 +53,11 @@ class EnvVars {
   @IsOptional()
   PORT?: number
 
+  // Сколько прокси стоит перед приложением: нужно, чтобы видеть настоящий IP.
+  @IsNumber()
+  @IsOptional()
+  TRUST_PROXY?: number
+
   @IsEnum(NodeEnv)
   @IsOptional()
   NODE_ENV?: NodeEnv
@@ -98,6 +103,11 @@ class EnvVars {
   @IsOptional()
   AI_CHECK_EFFORT?: string
 
+  // Модель, читающая расписание с фото; не задана — та же, что пишет материалы.
+  @IsString()
+  @IsOptional()
+  AI_IMPORT_MODEL?: string
+
   // Сколько материалов ИИ соберёт одному репетитору; не задан — без лимита.
   @IsNumber()
   @IsOptional()
@@ -113,6 +123,11 @@ export function validateEnv(raw: Record<string, unknown>): EnvVars {
       .map((e) => `  ${e.property}: ${Object.values(e.constraints ?? {}).join(', ')}`)
       .join('\n')
     throw new Error(`Некорректные переменные окружения:\n${details}\n\nСм. .env.example`)
+  }
+
+  // Без имени бота ссылки-приглашения ведут в никуда: t.me/?start=…
+  if (parsed.BOT_MODE !== BotMode.off && !parsed.BOT_USERNAME?.replace(/^@/, '').trim()) {
+    throw new Error('Нужен BOT_USERNAME — имя бота без @: из него собираются ссылки-приглашения')
   }
 
   // Webhook без секрета — открытый эндпоинт, принимающий «обновления»

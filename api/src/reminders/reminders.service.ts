@@ -1,9 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common'
-import { ReminderKind } from '@prisma/client'
 import { BotService } from '../bot/bot.service'
 import { PrismaService } from '../prisma/prisma.service'
-import { debtReminderText, lessonReminderText } from './messages'
-import { planReminders } from './schedule'
+import { lessonReminderText } from './messages'
 
 /** Сколько напоминаний берём за один тик. Защита от долгого цикла. */
 const BATCH_SIZE = 100
@@ -30,71 +28,6 @@ export class RemindersService {
     private readonly prisma: PrismaService,
     private readonly bot: BotService,
   ) {}
-
-  /**
-   * Создаёт записи напоминаний для занятия.
-   *
-   * Вызывается при создании и изменении занятия. Идемпотентна:
-   * @@unique([lessonId, kind]) не даст создать дубль, а skipDuplicates
-   * превращает повторный вызов в пустую операцию.
-   */
-  async planForLesson(lessonId: string, now = new Date()): Promise<number> {
-    const lesson = await this.prisma.lesson.findUnique({
-      where: { id: lessonId },
-      select: {
-        id: true,
-        startsAt: true,
-        status: true,
-        student: {
-          select: {
-            userId: true,
-            archivedAt: true,
-            notify: {
-              select: { enabled: true, beforeHours: true, beforeMinutes: true },
-            },
-          },
-        },
-      },
-    })
-
-    if (!lesson) return 0
-    // Напоминать о прошедшем или отменённом занятии смысла нет.
-    if (lesson.status !== 'PLANNED') return 0
-    // Ученик не подключён к боту — писать некуда.
-    if (!lesson.student.userId || lesson.student.archivedAt) return 0
-
-    const notify = lesson.student.notify
-    if (!notify) return 0
-
-    const planned = planReminders(lesson.startsAt, notify, now)
-    if (planned.length === 0) return 0
-
-    const result = await this.prisma.reminder.createMany({
-      data: planned.map((p) => ({
-        lessonId: lesson.id,
-        kind: p.kind,
-        scheduledAt: p.scheduledAt,
-      })),
-      // Повторный вызов после правки занятия не должен падать.
-      skipDuplicates: true,
-    })
-
-    return result.count
-  }
-
-  /**
-   * Пересоздаёт напоминания после изменения занятия.
-   *
-   * Сдвинули занятие на другой день — прежние времена отправки
-   * неверны. Уже отправленные не трогаем: из них и состоит защита
-   * от повторной отправки.
-   */
-  async replanForLesson(lessonId: string, now = new Date()): Promise<void> {
-    await this.prisma.reminder.deleteMany({
-      where: { lessonId, sentAt: null },
-    })
-    await this.planForLesson(lessonId, now)
-  }
 
   /**
    * Отправляет напоминания, которым пришло время.
@@ -165,7 +98,7 @@ export class RemindersService {
         student.name,
         lesson.startsAt,
         student.tutor.user.timezone,
-        reminder.kind === ReminderKind.BEFORE_MINUTES,
+        now,
       )
 
       try {
@@ -197,83 +130,6 @@ export class RemindersService {
     }
 
     return { sent, failed }
-  }
-
-  /**
-   * Напоминания о неоплаченных занятиях.
-   *
-   * Отдельно от напоминаний о занятиях: долг не привязан к одному
-   * занятию, и слать по сообщению на каждое неоплаченное — спам.
-   * Одно сообщение с суммой за всё.
-   *
-   * Вызывается раз в сутки; частота выбрана не «на глаз»: напоминание
-   * об оплате чаще раза в день раздражает и приводит к блокировке бота.
-   *
-   * Защита от повторов — запись Reminder с kind: DEBT на самом старом
-   * неоплаченном занятии. @@unique([lessonId, kind]) не даст создать
-   * вторую, поэтому двойной запуск cron не приведёт к двум сообщениям.
-   * Запись снимается, когда это занятие оплачено или долг закрыт.
-   */
-  async dispatchDebts(now = new Date()): Promise<{ sent: number }> {
-    // Кандидаты: подключённые ученики с включённым debtReminder,
-    // у которых есть прошедшие неоплаченные занятия.
-    const students = await this.prisma.student.findMany({
-      where: {
-        archivedAt: null,
-        userId: { not: null },
-        notify: { enabled: true, debtReminder: true },
-        lessons: { some: { status: 'DONE', paidAt: null } },
-      },
-      select: {
-        id: true,
-        name: true,
-        user: { select: { tgId: true } },
-        lessons: {
-          where: { status: 'DONE', paidAt: null },
-          // Старейшее первым: к нему привяжем отметку об отправке.
-          orderBy: { startsAt: 'asc' },
-          select: { id: true, price: true },
-        },
-      },
-      take: BATCH_SIZE,
-    })
-
-    let sent = 0
-
-    for (const student of students) {
-      if (!student.user || student.lessons.length === 0) continue
-
-      const total = student.lessons.reduce((sum, l) => sum + l.price, 0)
-      // Долг в ноль копеек (бесплатные занятия) напоминать не о чем.
-      if (total <= 0) continue
-
-      // Ставим отметку до отправки: при гонке двух тиков второй получит
-      // нарушение уникальности и пропустит ученика.
-      const anchorId = student.lessons[0].id
-      try {
-        await this.prisma.reminder.create({
-          data: { lessonId: anchorId, kind: ReminderKind.DEBT, scheduledAt: now, sentAt: now },
-        })
-      } catch {
-        // Отметка уже есть — про этот долг ученику писали.
-        continue
-      }
-
-      const text = debtReminderText(student.name, student.lessons.length, total)
-      const result = await this.bot.sendMessage(student.user.tgId, text)
-      if (result.ok) {
-        sent += 1
-      } else {
-        this.logger.warn(`Долг не отправлен ученику ${student.id}: ${result.error}`)
-        // Не ушло — снимаем отметку, чтобы попробовать в следующий раз.
-        await this.prisma.reminder.deleteMany({
-          where: { lessonId: anchorId, kind: ReminderKind.DEBT },
-        })
-      }
-    }
-
-    if (sent > 0) this.logger.log(`Напоминаний о долге отправлено: ${sent}`)
-    return { sent }
   }
 
   /**

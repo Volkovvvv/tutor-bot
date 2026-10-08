@@ -1,12 +1,15 @@
 import { Module } from '@nestjs/common'
-import { RemindersModule } from '../reminders/reminders.module'
+import { MaterialsModule } from '../materials/materials.module'
+import { ReminderPlanModule } from '../reminders/reminder-plan.module'
+import { LessonSeriesService } from './lesson-series.service'
 import { LessonsController } from './lessons.controller'
 import { LessonsService } from './lessons.service'
+import { ScheduleImportService } from './schedule-import.service'
 
 @Module({
-  imports: [RemindersModule],
+  imports: [ReminderPlanModule, MaterialsModule],
   controllers: [LessonsController],
-  providers: [LessonsService],
+  providers: [LessonsService, ScheduleImportService, LessonSeriesService],
   exports: [LessonsService],
 })
 export class LessonsModule {}

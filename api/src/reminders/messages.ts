@@ -3,7 +3,7 @@
  *
  * Время показываем в таймзоне репетитора: он ставит занятия в своём
  * времени, и «16:00» в сообщении должно совпадать с тем, что он видит
- * в приложении.
+ * в приложении. Рядом подписываем пояс — см. zoneLabel.
  */
 
 /** Час и минуты занятия в указанной таймзоне. */
@@ -23,50 +23,46 @@ function formatDate(date: Date, timezone: string): string {
   }).format(date)
 }
 
+// Привычные названия; остальным поясам — смещение от UTC
+const ZONE_NAMES: Record<string, string> = {
+  'Europe/Moscow': 'мск',
+  'Europe/Minsk': 'по Минску',
+}
+
+/**
+ * Чьё это время: «мск» или «UTC+5».
+ *
+ * Пояс ученика бот узнать не может, а занятия онлайн часто идут через
+ * несколько поясов: «в 16:00» без уточнения ученик прочтёт по своим часам.
+ */
+export function zoneLabel(date: Date, timezone: string): string {
+  if (ZONE_NAMES[timezone]) return ZONE_NAMES[timezone]
+  const offset = new Intl.DateTimeFormat('en-US', { timeZone: timezone, timeZoneName: 'shortOffset' })
+    .formatToParts(date)
+    .find((p) => p.type === 'timeZoneName')?.value
+  // «GMT+5» → «UTC+5»; у нулевого смещения движки пишут то «GMT», то «GMT+0»
+  return (offset ?? 'GMT').replace('GMT', 'UTC').replace(/[+-]0$/, '')
+}
+
+/** Календарный день в таймзоне числом суток от эпохи — чтобы сравнивать дни. */
+function dayNumber(date: Date, timezone: string): number {
+  // en-CA даёт «2026-10-05»
+  const [y, m, d] = new Intl.DateTimeFormat('en-CA', { timeZone: timezone }).format(date).split('-').map(Number)
+  return Date.UTC(y, m - 1, d) / 86_400_000
+}
+
+/**
+ * «Сегодня», «завтра» или дата — по тому, когда сообщение уходит на самом деле:
+ * тихие часы могут сдвинуть напоминание «за час» на вечер накануне.
+ */
 export function lessonReminderText(
   studentName: string,
   startsAt: Date,
   timezone: string,
-  isSoon: boolean,
+  now: Date,
 ): string {
   const time = formatTime(startsAt, timezone)
-
-  if (isSoon) {
-    return `${studentName}, напоминаю: занятие сегодня в ${time}.`
-  }
-  return `${studentName}, напоминаю: занятие ${formatDate(startsAt, timezone)} в ${time}.`
-}
-
-/** Сумма из копеек в читаемые рубли. */
-export function formatMoney(kopecks: number): string {
-  const rubles = kopecks / 100
-  return new Intl.NumberFormat('ru-RU', {
-    style: 'currency',
-    currency: 'RUB',
-    // Копейки показываем только когда они есть: «1500 ₽» вместо «1500,00 ₽».
-    minimumFractionDigits: kopecks % 100 === 0 ? 0 : 2,
-    maximumFractionDigits: 2,
-  }).format(rubles)
-}
-
-export function debtReminderText(
-  studentName: string,
-  lessonCount: number,
-  totalKopecks: number,
-): string {
-  const lessons = pluralize(lessonCount, 'занятие', 'занятия', 'занятий')
-  return (
-    `${studentName}, напоминаю об оплате: ${lessonCount} ${lessons} ` +
-    `на сумму ${formatMoney(totalKopecks)}.`
-  )
-}
-
-/** Русская форма числительного: 1 занятие, 2 занятия, 5 занятий. */
-function pluralize(n: number, one: string, few: string, many: string): string {
-  const mod100 = n % 100
-  if (mod100 >= 11 && mod100 <= 14) return many
-  const mod10 = n % 10
-  if (mod10 === 1) return one
-  if (mod10 >= 2 && mod10 <= 4) return few
-  return many
+  const days = dayNumber(startsAt, timezone) - dayNumber(now, timezone)
+  const day = days === 0 ? 'сегодня' : days === 1 ? 'завтра' : formatDate(startsAt, timezone)
+  return `${studentName}, напоминаю: занятие ${day} в ${time} ${zoneLabel(startsAt, timezone)}.`
 }

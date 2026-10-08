@@ -2,6 +2,7 @@ import { Global, Module } from '@nestjs/common'
 import { ConfigModule, ConfigService } from '@nestjs/config'
 import { JwtModule } from '@nestjs/jwt'
 import type { StringValue } from 'ms'
+import { ReminderPlanModule } from '../reminders/reminder-plan.module'
 import { AuthController } from './auth.controller'
 import { AuthService } from './auth.service'
 
@@ -19,6 +20,7 @@ function parseExpiresIn(raw: string | undefined): StringValue {
 @Global()
 @Module({
   imports: [
+    ReminderPlanModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],

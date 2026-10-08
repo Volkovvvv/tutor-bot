@@ -1,0 +1,71 @@
+/* Системный выбор файла прячем: его открывает наша кнопка */
+.file { display: none; }
+
+.or {
+  text-align: center;
+  font-size: 13px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--ink);
+  opacity: 0.7;
+}
+
+.row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.off { opacity: 0.55; }
+
+.rowHead {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.source {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Контролы внутри белой карточки: без собственной тени, на мягком фоне */
+.control {
+  /* Правый отступ не трогаем: у Select там стрелка */
+  padding-top: 11px;
+  padding-bottom: 11px;
+  padding-left: 14px;
+  background-color: var(--card-soft);
+  box-shadow: none;
+}
+
+.price {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.priceName {
+  flex: 1;
+  min-width: 0;
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.priceInput { width: 120px; flex: 0 0 auto; }
+
+.summary {
+  font-size: 14px;
+  font-weight: 500;
+  line-height: 1.45;
+  color: var(--ink);
+}

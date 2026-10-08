@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsString, MaxLength } from 'class-validator'
+import { IsNotEmpty, IsOptional, IsString, MaxLength } from 'class-validator'
 
 export class LoginDto {
   /**
@@ -10,4 +10,13 @@ export class LoginDto {
   @IsNotEmpty({ message: 'initData обязателен' })
   @MaxLength(8192)
   initData!: string
+
+  /**
+   * Таймзона устройства («Asia/Yekaterinburg»): в ней репетитор ставит
+   * занятия, в ней же показываем время в напоминаниях и считаем тихие часы.
+   */
+  @IsOptional()
+  @IsString()
+  @MaxLength(64)
+  timezone?: string
 }

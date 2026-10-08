@@ -4,7 +4,7 @@ import { addDays, dayTitle, fromMinutes, parseISO, toMinutes, weekOf, weekdaySho
 import { cx } from '../../../shared/lib/cx.js'
 import { formatMoney, pluralLessons } from '../../../shared/lib/format.js'
 import { useNow } from '../../../shared/lib/useNow.js'
-import { PageTitle, Screen } from '../../../shared/ui/index.js'
+import { Button, PageTitle, Screen } from '../../../shared/ui/index.js'
 import s from './CalendarPage.module.css'
 
 // Пикселей на час таймлайна
@@ -23,7 +23,7 @@ function weekRangeTitle(week) {
   return title[0].toUpperCase() + title.slice(1)
 }
 
-export default function CalendarPage({ students, lessons, date, onSelectDate, onOpenLesson, onAdd }) {
+export default function CalendarPage({ students, lessons, date, onSelectDate, onOpenLesson, onAdd, onImportSchedule }) {
   const now = useNow()
   const studentById = indexById(students)
   const week = weekOf(date)
@@ -153,6 +153,10 @@ export default function CalendarPage({ students, lessons, date, onSelectDate, on
           ) : null}
         </div>
       </div>
+
+      <Button variant="secondary" onClick={onImportSchedule}>
+        Загрузить расписание с фото
+      </Button>
     </Screen>
   )
 }

@@ -41,7 +41,7 @@ export function defaultNotifySettings() {
     // напоминание в день занятия за N минут (0 — выключено)
     beforeMinutes: 60,
     // напоминание о неоплаченных прошедших занятиях
-    debtReminder: true,
+    debtReminder: false,
     // не писать раньше / позже указанного времени
     quietFrom: '22:00',
     quietTo: '09:00',

@@ -64,7 +64,7 @@ model Tutor {
   // при создании карточки. Смысл полей тот же, что там.
   notifyBeforeHours   Int     @default(24)
   notifyBeforeMinutes Int     @default(60)
-  notifyDebtReminder  Boolean @default(true)
+  notifyDebtReminder  Boolean @default(false)
 
   // Когда репетитор прошёл онбординг; null — показать его при входе.
   onboardedAt DateTime?
@@ -78,6 +78,7 @@ model Tutor {
 
   students  Student[]
   lessons   Lesson[]
+  series    LessonSeries[]
   materials LessonMaterial[]
 
   @@map("tutors")
@@ -119,6 +120,7 @@ model Student {
 
   notify  NotifySettings?
   lessons Lesson[]
+  series  LessonSeries[]
   invites Invite[]
 
   // Список учеников кабинета — самый частый запрос в приложении.
@@ -139,7 +141,7 @@ model NotifySettings {
   // Второе напоминание за N минут до начала; 0 — выключено.
   beforeMinutes Int @default(60)
   // Напоминать о прошедших неоплаченных занятиях.
-  debtReminder  Boolean @default(true)
+  debtReminder  Boolean @default(false)
 
   // Окно тишины в локальном времени ученика: "22:00"–"09:00".
   // Строки, а не время: важны только часы и минуты, без даты.
@@ -184,16 +186,61 @@ model Lesson {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
+  // Серия, из которой занятие создано; null — разовое. Занятие серии —
+  // обычное занятие: его можно перенести или отменить, не трогая остальные.
+  seriesId String?
+  series   LessonSeries? @relation(fields: [seriesId], references: [id], onDelete: SetNull)
+
   reminders Reminder[]
   material  LessonMaterial?
 
   // Расписание кабинета за период.
   @@index([tutorId, startsAt])
+  // Будущие занятия серии — при её остановке.
+  @@index([seriesId, startsAt])
   // Рабочий индекс планировщика: «какие занятия скоро начнутся».
   @@index([startsAt, status])
   // Долги ученика: прошедшие занятия без оплаты.
   @@index([studentId, status, paidAt])
   @@map("lessons")
+}
+
+// Занятие «каждую неделю в это время».
+//
+// Серия не заменяет занятия, а порождает их: строки Lesson создаются заранее,
+// на несколько недель вперёд, и раз в час горизонт продлевается. Так всё, что
+// работает с занятиями — напоминания, деньги, статусы, материалы, — про серии
+// ничего не знает.
+model LessonSeries {
+  id String @id @default(uuid())
+
+  tutorId String
+  tutor   Tutor  @relation(fields: [tutorId], references: [id], onDelete: Cascade)
+
+  studentId String
+  student   Student @relation(fields: [studentId], references: [id], onDelete: Cascade)
+
+  // Первое занятие серии. День недели и время остальных — те же
+  // в таймзоне репетитора (см. src/lessons/series.ts).
+  startsAt DateTime
+  duration Int      @default(60)
+
+  // Начало последнего уже созданного занятия. Продление идёт только дальше
+  // этой отметки: занятие, которое репетитор удалил или перенёс, заново
+  // на прежнем месте не появится.
+  generatedUntil DateTime
+  // Серия остановлена: занятия с этого момента больше не создаются.
+  endsAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  lessons Lesson[]
+
+  // Выборка продления: живые серии, у которых горизонт подошёл к концу.
+  @@index([endsAt, generatedUntil])
+  @@index([studentId])
+  @@map("lesson_series")
 }
 
 enum Country {

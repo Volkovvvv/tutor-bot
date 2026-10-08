@@ -35,7 +35,7 @@ const FIRST_STEPS = [
   'Добавьте занятие в календарь, и оно появится здесь.',
 ]
 
-export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson, onInvite, onAddStudent }) {
+export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson, onImportSchedule, onInvite, onAddStudent }) {
   const now = useNow()
   const studentById = indexById(students)
   const today = lessonsOn(lessons, now.date)
@@ -65,6 +65,10 @@ export default function TodayPage({ students, lessons, onOpenLesson, onAddLesson
           <Button onClick={onInvite}>Пригласить ученика</Button>
           <Button className={s.firstManual} variant="secondary" onClick={onAddStudent}>
             + Добавить вручную
+          </Button>
+          {/* Импорт заводит и учеников, и занятия — тоже годится первым шагом */}
+          <Button className={s.firstManual} variant="secondary" onClick={onImportSchedule}>
+            Загрузить расписание с фото
           </Button>
         </div>
       </Screen>

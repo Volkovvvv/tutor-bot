@@ -100,15 +100,17 @@ export function lessonFromApi(l) {
     price: Math.round(l.price / 100),
     status: STATUS_FROM_API[l.status] ?? 'planned',
     paid: l.paidAt !== null,
+    // Серия «каждую неделю», из которой занятие создано; null — разовое
+    seriesId: l.seriesId ?? null,
   }
 }
 
-export function lessonToApi({ studentId, date, time }) {
+export function lessonToApi({ studentId, date, time, duration }) {
   // input[type=date] и input[type=time] отдают локальное время без зоны;
   // new Date с составной строкой трактует её как локальную, что и нужно —
   // репетитор ставит занятие в своём времени.
   const local = new Date(`${date}T${time}:00`)
-  return { studentId, startsAt: local.toISOString() }
+  return { studentId, startsAt: local.toISOString(), ...(duration ? { duration } : {}) }
 }
 
 export function statusToApi(status) {

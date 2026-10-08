@@ -26,7 +26,6 @@ const FEATURES = [
 const REMINDERS = [
   ['notifyBeforeHours', 'За 24 часа', 'Первое напоминание накануне', 24],
   ['notifyBeforeMinutes', 'За 1 час', 'Повтор перед началом', 60],
-  ['notifyDebtReminder', 'О долге', 'Если урок не оплачен к вечеру', true],
 ]
 
 const STEPS = 5
@@ -54,7 +53,6 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
   const [reminders, setReminders] = useState({
     notifyBeforeHours: profile.notifyBeforeHours > 0,
     notifyBeforeMinutes: profile.notifyBeforeMinutes > 0,
-    notifyDebtReminder: profile.notifyDebtReminder,
   })
   const [studentName, setStudentName] = useState('')
   const [demoTick, setDemoTick] = useState(0)
@@ -153,7 +151,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify }) {
           {
             notifyBeforeHours: reminders.notifyBeforeHours ? 24 : 0,
             notifyBeforeMinutes: reminders.notifyBeforeMinutes ? 60 : 0,
-            notifyDebtReminder: reminders.notifyDebtReminder,
+            notifyDebtReminder: false,
           },
           4
         ),

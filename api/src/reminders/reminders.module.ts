@@ -6,7 +6,5 @@ import { RemindersService } from './reminders.service'
 @Module({
   imports: [BotModule],
   providers: [RemindersService, RemindersScheduler],
-  // LessonsModule планирует напоминания при создании занятий.
-  exports: [RemindersService],
 })
 export class RemindersModule {}

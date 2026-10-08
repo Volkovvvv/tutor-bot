@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { lessonsOn } from '../../../entities/lesson/index.js'
 import { addDays, dayTitle, parseISO, weekOf, weekdayShort } from '../../../shared/lib/date.js'
 import { cx } from '../../../shared/lib/cx.js'
-import { Button, EmptyState, Input, Sheet } from '../../../shared/ui/index.js'
+import { Button, EmptyState, Input, Sheet, Switch } from '../../../shared/ui/index.js'
 import s from './AddLessonSheet.module.css'
 
 // Самые частые слоты репетитора. Остальное — через «Другое время»
@@ -18,12 +18,14 @@ function shortNames(students) {
 
 /**
  * Шторка «Новое занятие»: ученик, день и время — всё чипсами,
- * занятые слоты выбранного дня зачёркнуты.
+ * занятые слоты выбранного дня зачёркнуты. С «каждую неделю» занятие
+ * становится первым в серии.
  */
 export default function AddLessonSheet({ students, lessons, date, studentId, onSave, onClose }) {
   const [pickedStudent, setPickedStudent] = useState(studentId ?? null)
   const [pickedDate, setPickedDate] = useState(date)
   const [time, setTime] = useState(null)
+  const [repeat, setRepeat] = useState(false)
 
   // Две недели, начиная с понедельника недели исходной даты
   const days = [...weekOf(date), ...weekOf(addDays(date, 7))]
@@ -37,7 +39,7 @@ export default function AddLessonSheet({ students, lessons, date, studentId, onS
 
   const save = () => {
     if (!valid) return
-    onSave({ studentId: pickedStudent, date: pickedDate, time })
+    onSave({ studentId: pickedStudent, date: pickedDate, time, repeat })
   }
 
   if (students.length === 0) {
@@ -110,6 +112,11 @@ export default function AddLessonSheet({ students, lessons, date, studentId, onS
             onChange={(e) => setTime(e.target.value || null)}
           />
         </label>
+      </div>
+
+      <div className={s.custom}>
+        <span>Каждую неделю в это время</span>
+        <Switch checked={repeat} onChange={setRepeat} label="Каждую неделю в это время" />
       </div>
 
       <Button onClick={save} disabled={!valid}>

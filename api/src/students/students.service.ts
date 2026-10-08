@@ -1,6 +1,7 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common'
+import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import type { Prisma } from '@prisma/client'
 import { PrismaService } from '../prisma/prisma.service'
+import { ReminderPlanner } from '../reminders/reminder-planner.service'
 import { TutorsService } from '../tutors/tutors.service'
 import type { CreateStudentDto } from './dto/create-student.dto'
 import type { ListStudentsDto } from './dto/list-students.dto'
@@ -40,9 +41,12 @@ export type StudentView = Prisma.StudentGetPayload<{ select: typeof STUDENT_SELE
 
 @Injectable()
 export class StudentsService {
+  private readonly logger = new Logger(StudentsService.name)
+
   constructor(
     private readonly prisma: PrismaService,
     private readonly tutors: TutorsService,
+    private readonly reminders: ReminderPlanner,
   ) {}
 
   /**
@@ -59,7 +63,7 @@ export class StudentsService {
         ...(query.includeArchived ? {} : { archivedAt: null }),
       },
       select: STUDENT_SELECT,
-      orderBy: [{ archivedAt: 'asc' }, { name: 'asc' }],
+      orderBy: [{ archivedAt: 'asc' }, { name: 'asc' }, { id: 'asc' }],
       skip: query.skip ?? 0,
       take: query.take ?? 100,
     })
@@ -125,6 +129,8 @@ export class StudentsService {
       update: dto,
       create: { studentId: id, ...dto },
     })
+    // Новые настройки должны действовать и на уже поставленные занятия
+    await this.safeReplan(id)
 
     return this.findOne(tutorId, id)
   }
@@ -146,11 +152,22 @@ export class StudentsService {
   async restore(tutorId: string, id: string): Promise<StudentView> {
     await this.assertOwned(tutorId, id)
 
-    return this.prisma.student.update({
+    const student = await this.prisma.student.update({
       where: { id },
       data: { archivedAt: null },
       select: STUDENT_SELECT,
     })
+    await this.safeReplan(id)
+    return student
+  }
+
+  /** Напоминания — вторичный эффект: их сбой не должен ронять правку карточки. */
+  private async safeReplan(studentId: string): Promise<void> {
+    try {
+      await this.reminders.replanForStudent(studentId)
+    } catch (e) {
+      this.logger.error(`Не удалось перепланировать напоминания ученика: ${(e as Error).message}`)
+    }
   }
 
   /**

@@ -28,6 +28,7 @@ export default function LessonPage({
   onSetStatus,
   onTogglePaid,
   onDelete,
+  onStopSeries,
   subjects = [],
   onAddSubject,
   country,
@@ -40,6 +41,8 @@ export default function LessonPage({
 
   const name = student?.name ?? 'Удалённый ученик'
   const level = levelLabel(student) ?? student?.note
+  // Оборвать серию можно с ещё не проведённого занятия: прошедшие — уже история
+  const repeats = Boolean(lesson.seriesId) && lesson.status === 'planned'
 
   return (
     <Screen>
@@ -59,6 +62,7 @@ export default function LessonPage({
       <InfoList>
         <InfoRow label="Дата">{dayTitle(lesson.date)}</InfoRow>
         <InfoRow label="Время">{lesson.time}–{lessonEnd(lesson)}</InfoRow>
+        {lesson.seriesId ? <InfoRow label="Повтор">Каждую неделю</InfoRow> : null}
         <InfoRow label="Стоимость">{formatMoney(lessonPrice(lesson, student))}</InfoRow>
         <InfoRow label="Оплачено">
           <Switch checked={lesson.paid} onChange={() => onTogglePaid(lesson.id)} label="Оплачено" />
@@ -90,7 +94,14 @@ export default function LessonPage({
           subtitle={`${name}, ${dayTitle(lesson.date).toLowerCase()}, ${lesson.time}. Занятие исчезнет из расписания вместе с материалами урока. Вернуть его не получится.`}
           onClose={() => setConfirming(false)}
         >
-          <Button variant="danger" className={s.confirm} onClick={() => onDelete(lesson.id)}>Удалить</Button>
+          <Button variant="danger" className={s.confirm} onClick={() => onDelete(lesson.id)}>
+            {repeats ? 'Удалить только это' : 'Удалить'}
+          </Button>
+          {repeats ? (
+            <Button variant="danger" className={s.confirm} onClick={() => onStopSeries(lesson)}>
+              Это и все следующие
+            </Button>
+          ) : null}
           <Button variant="secondary" onClick={() => setConfirming(false)}>Не удалять</Button>
         </Sheet>
       ) : null}

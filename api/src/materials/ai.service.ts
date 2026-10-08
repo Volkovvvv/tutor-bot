@@ -11,6 +11,12 @@ import {
   templateContent,
 } from './material-content'
 
+/** Сообщение чата. Массив в content — части с картинкой, для моделей со зрением. */
+export interface ChatMessage {
+  role: 'system' | 'user'
+  content: string | object[]
+}
+
 export interface Generated {
   content: MaterialContent
   /** Модель, собравшая материалы; "template" — заглушка без ключа. */
@@ -52,6 +58,8 @@ export class AiService {
   // Sol на medium не нашёл «ценный → ценен» ни разу из пяти, Sonnet на high — четыре из четырёх.
   private readonly checkModel: string
   private readonly checkEffort: ReasoningEffort
+  // Кто читает расписание с фото: модель обязана принимать картинки
+  private readonly importModel: string
 
   constructor(config: ConfigService) {
     this.apiKey = config.get<string>('AI_API_KEY') || undefined
@@ -61,6 +69,7 @@ export class AiService {
     this.effort = reasoningEffort(config.get('AI_REASONING_EFFORT'))
     this.checkModel = config.get<string>('AI_CHECK_MODEL') || this.model
     this.checkEffort = config.get('AI_CHECK_EFFORT') ? reasoningEffort(config.get('AI_CHECK_EFFORT')) : this.effort
+    this.importModel = config.get<string>('AI_IMPORT_MODEL') || this.model
     this.logger.log(
       `ИИ: модель ${this.model}, рассуждения ${this.effort}; проверка теории: ${this.checkModel}, рассуждения ${this.checkEffort}`,
     )
@@ -94,17 +103,26 @@ export class AiService {
   }
 
   /** Один запрос к модели: текст ответа или null. */
-  ask(messages: ReturnType<typeof buildMessages>): Promise<string | null> {
+  ask(messages: ChatMessage[]): Promise<string | null> {
     return this.complete(messages)
   }
 
   /** Запрос к проверяющей модели (AI_CHECK_MODEL); не задана — к той же, что пишет материалы. */
-  askChecker(messages: ReturnType<typeof buildMessages>): Promise<string | null> {
+  askChecker(messages: ChatMessage[]): Promise<string | null> {
     return this.complete(messages, this.checkModel, this.checkEffort)
   }
 
+  /**
+   * Запрос к модели, читающей расписание (AI_IMPORT_MODEL); не задана — к основной.
+   * Рассуждения на минимуме: переписать таблицу — не сочинить задания,
+   * а репетитор ждёт ответа, глядя на экран.
+   */
+  askImporter(messages: ChatMessage[]): Promise<string | null> {
+    return this.complete(messages, this.importModel, 'low')
+  }
+
   private async complete(
-    messages: ReturnType<typeof buildMessages>,
+    messages: ChatMessage[],
     model = this.model,
     effort = this.effort,
   ): Promise<string | null> {

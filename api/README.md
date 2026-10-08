@@ -156,6 +156,10 @@ GET    /api/lessons          ?studentId&status&from&to&skip&take
 GET    /api/lessons/summary  ?from&to — по умолчанию текущий месяц
 GET    /api/lessons/:id
 POST   /api/lessons          { studentId, startsAt, duration?, price?, note? }
+POST   /api/lessons/bulk     { lessons: [{ studentId, startsAt, duration?, price?, note? }] } — до 300; занятия, уже стоящие у ученика на это время, пропускаются
+POST   /api/lessons/series   { series: [{ studentId, startsAt, duration? }] } — занятия «каждую неделю»; создаются на 12 недель вперёд и продлеваются раз в час
+DELETE /api/lessons/series/:id  ?from — оборвать серию: запланированные занятия с этого момента удаляются
+POST   /api/lessons/import/recognize  { image?, text? } — расписание с фото (data URL) или из текста → { rows }; в базу не пишет
 PATCH  /api/lessons/:id      { startsAt?, duration?, price?, status?, paid?, note? }
 DELETE /api/lessons/:id
 ```

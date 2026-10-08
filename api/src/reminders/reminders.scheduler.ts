@@ -40,20 +40,4 @@ export class RemindersScheduler {
       this.running = false
     }
   }
-
-  /**
-   * Долги — раз в сутки в 11:00. Не ночью: сообщение об оплате,
-   * пришедшее в 3 утра, приводит к блокировке бота.
-   *
-   * Время сервера, не репетитора: для напоминания об оплате
-   * точность до часового пояса не критична.
-   */
-  @Cron('0 11 * * *')
-  async debtTick(): Promise<void> {
-    try {
-      await this.reminders.dispatchDebts()
-    } catch (e) {
-      this.logger.error(`Сбой рассылки долгов: ${(e as Error).message}`)
-    }
-  }
 }

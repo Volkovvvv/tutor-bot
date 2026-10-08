@@ -2,6 +2,7 @@ import { Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
+import { ReminderPlanner } from '../reminders/reminder-planner.service'
 import { InitDataError, verifyInitData } from '../telegram/init-data'
 import type { JwtPayload } from './auth.types'
 
@@ -19,6 +20,17 @@ export interface LoginResult {
   tutorId: string
 }
 
+/** Таймзона от клиента — только если её знает Intl; иначе остаётся прежняя. */
+function validTimezone(raw: string | undefined): string | null {
+  if (!raw) return null
+  try {
+    new Intl.DateTimeFormat('ru-RU', { timeZone: raw })
+    return raw
+  } catch {
+    return null
+  }
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name)
@@ -27,6 +39,7 @@ export class AuthService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly jwt: JwtService,
+    private readonly reminders: ReminderPlanner,
     config: ConfigService,
   ) {
     this.botToken = config.getOrThrow<string>('BOT_TOKEN')
@@ -39,7 +52,7 @@ export class AuthService {
    * Подпись проверяется до любого обращения к базе: неаутентифицированный
    * запрос не должен уметь даже создавать строки.
    */
-  async login(initDataRaw: string): Promise<LoginResult> {
+  async login(initDataRaw: string, timezoneRaw?: string): Promise<LoginResult> {
     let data
     try {
       data = verifyInitData(initDataRaw, this.botToken)
@@ -54,9 +67,11 @@ export class AuthService {
     }
 
     const tg = data.user
+    const timezone = validTimezone(timezoneRaw)
 
     // Транзакция: пользователь и кабинет создаются вместе либо никак.
-    const { user, tutor } = await this.prisma.$transaction(async (tx) => {
+    const { user, tutor, zoneChanged } = await this.prisma.$transaction(async (tx) => {
+      const before = await tx.user.findUnique({ where: { tgId: BigInt(tg.id) }, select: { timezone: true } })
       const user = await tx.user.upsert({
         where: { tgId: BigInt(tg.id) },
         // Профиль в Telegram мог измениться с прошлого входа.
@@ -65,6 +80,7 @@ export class AuthService {
           lastName: tg.lastName ?? null,
           username: tg.username ?? null,
           photoUrl: tg.photoUrl ?? null,
+          ...(timezone ? { timezone } : {}),
         },
         create: {
           tgId: BigInt(tg.id),
@@ -72,6 +88,7 @@ export class AuthService {
           lastName: tg.lastName ?? null,
           username: tg.username ?? null,
           photoUrl: tg.photoUrl ?? null,
+          ...(timezone ? { timezone } : {}),
         },
       })
 
@@ -83,8 +100,16 @@ export class AuthService {
         create: { userId: user.id },
       })
 
-      return { user, tutor }
+      return { user, tutor, zoneChanged: before !== null && before.timezone !== user.timezone }
     })
+
+    // Тихие часы считаются в таймзоне репетитора: сменилась — уже запланированные
+    // напоминания могли прийтись на ночь. Вход этого не ждёт.
+    if (zoneChanged) {
+      void this.reminders
+        .replanForTutor(tutor.id)
+        .catch((e: Error) => this.logger.error(`Напоминания после смены таймзоны не перепланированы: ${e.message}`))
+    }
 
     const payload: JwtPayload = { sub: user.id, tid: tutor.id }
 

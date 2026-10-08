@@ -83,7 +83,8 @@ export async function login() {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ initData }),
+    // Таймзона устройства: в ней сервер пишет время в напоминаниях
+    body: JSON.stringify({ initData, timezone: deviceTimezone() }),
   })
   if (!res.ok) {
     // Сервер намеренно не раскрывает, что именно не сошлось в подписи
@@ -94,6 +95,26 @@ export async function login() {
   const data = await res.json()
   setToken(data.accessToken)
   return data
+}
+
+function deviceTimezone() {
+  try {
+    return Intl.DateTimeFormat().resolvedOptions().timeZone || undefined
+  } catch {
+    return undefined
+  }
+}
+
+// Сервер отдаёт список страницами (не больше 200 записей): собираем все,
+// иначе у репетитора с длинной историей новые занятия не дошли бы до приложения.
+const PAGE = 200
+export async function getAll(path) {
+  const all = []
+  for (;;) {
+    const page = await request(`${path}${path.includes('?') ? '&' : '?'}take=${PAGE}&skip=${all.length}`)
+    all.push(...page)
+    if (page.length < PAGE) return all
+  }
 }
 
 async function devInitData() {

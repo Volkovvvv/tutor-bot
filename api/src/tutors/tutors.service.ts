@@ -77,7 +77,8 @@ export class TutorsService {
       select: { notifyBeforeHours: true, notifyBeforeMinutes: true, notifyDebtReminder: true },
     })
     if (!t) return {}
-    const any = t.notifyBeforeHours > 0 || t.notifyBeforeMinutes > 0 || t.notifyDebtReminder
+    // Напоминание о долге пока не рассылается, поэтому на «включено» не влияет
+    const any = t.notifyBeforeHours > 0 || t.notifyBeforeMinutes > 0
     return {
       enabled: any,
       beforeHours: t.notifyBeforeHours,

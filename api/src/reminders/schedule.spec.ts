@@ -70,4 +70,50 @@ describe('planReminders', () => {
 
     expect(hours.scheduledAt.toISOString()).toBe('2026-10-13T13:00:00.000Z')
   })
+
+  describe('тихие часы', () => {
+    // Москва = UTC+3, тишина 22:00–09:00
+    const quiet = { quietFrom: '22:00', quietTo: '09:00' }
+    const early = new Date('2026-10-01T10:00:00Z')
+
+    it('не трогает напоминание вне тишины', () => {
+      // Занятие в 16:00 по Москве: «за час» уходит в 15:00
+      const [minutes] = planReminders(new Date('2026-10-05T13:00:00Z'), notify({ beforeHours: 0, ...quiet }), early)
+      expect(minutes.scheduledAt.toISOString()).toBe('2026-10-05T12:00:00.000Z')
+    })
+
+    it('«за сутки» про утреннее занятие переносит на конец тишины накануне', () => {
+      // Занятие в 8:00 по Москве 5 октября → 9:00 по Москве 4 октября
+      const [hours] = planReminders(new Date('2026-10-05T05:00:00Z'), notify({ beforeMinutes: 0, ...quiet }), early)
+      expect(hours.scheduledAt.toISOString()).toBe('2026-10-04T06:00:00.000Z')
+    })
+
+    it('«за час» про утреннее занятие переносит на вечер накануне', () => {
+      // 7:00 по Москве — тишина, до 9:00 ждать нельзя → 21:59 по Москве 4 октября
+      const [minutes] = planReminders(new Date('2026-10-05T05:00:00Z'), notify({ beforeHours: 0, ...quiet }), early)
+      expect(minutes.scheduledAt.toISOString()).toBe('2026-10-04T18:59:00.000Z')
+    })
+
+    it('считает тишину в таймзоне репетитора', () => {
+      // 12:00 UTC — день в Москве, но 22:00 во Владивостоке
+      const startsAt = new Date('2026-10-05T13:00:00Z')
+      const [minutes] = planReminders(startsAt, notify({ beforeHours: 0, ...quiet }), early, 'Asia/Vladivostok')
+      expect(minutes.scheduledAt.toISOString()).toBe('2026-10-05T11:59:00.000Z')
+    })
+
+    it('не шлёт два напоминания в одну минуту', () => {
+      // «За 2 часа» и «за час» про занятие в 8:00 оба уезжают на 21:59
+      const result = planReminders(new Date('2026-10-05T05:00:00Z'), notify({ beforeHours: 2, ...quiet }), early)
+      expect(result).toHaveLength(1)
+    })
+
+    it('одинаковые границы означают «тишины нет»', () => {
+      const [minutes] = planReminders(
+        new Date('2026-10-05T05:00:00Z'),
+        notify({ beforeHours: 0, quietFrom: '09:00', quietTo: '09:00' }),
+        early,
+      )
+      expect(minutes.scheduledAt.toISOString()).toBe('2026-10-05T04:00:00.000Z')
+    })
+  })
 })

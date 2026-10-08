@@ -8,5 +8,7 @@ import { MaterialsService } from './materials.service'
   imports: [BotModule],
   controllers: [MaterialsController],
   providers: [MaterialsService, AiService],
+  // ИИ нужен и импорту расписания
+  exports: [AiService],
 })
 export class MaterialsModule {}

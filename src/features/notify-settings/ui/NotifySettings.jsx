@@ -17,12 +17,6 @@ const ROWS = [
     on: (n) => n.beforeMinutes > 0,
     patch: (on) => ({ beforeMinutes: on ? 60 : 0 }),
   },
-  {
-    title: 'О долге',
-    hint: 'Если урок не оплачен к вечеру',
-    on: (n) => n.debtReminder,
-    patch: (on) => ({ debtReminder: on }),
-  },
 ]
 
 // Настройки хранятся у ученика, применяет их бот. Пока ученик

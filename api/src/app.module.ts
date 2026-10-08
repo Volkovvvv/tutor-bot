@@ -2,10 +2,11 @@ import { Module } from '@nestjs/common'
 import { ConfigModule } from '@nestjs/config'
 import { APP_GUARD } from '@nestjs/core'
 import { ScheduleModule } from '@nestjs/schedule'
-import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler'
+import { ThrottlerModule } from '@nestjs/throttler'
 import { AuthModule } from './auth/auth.module'
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard'
 import { BotModule } from './bot/bot.module'
+import { UserThrottlerGuard } from './common/user-throttler.guard'
 import { validateEnv } from './config/env.validation'
 import { HealthModule } from './health/health.module'
 import { InvitesModule } from './invites/invites.module'
@@ -39,9 +40,10 @@ import { TutorsModule } from './tutors/tutors.module'
     HealthModule,
   ],
   providers: [
-    { provide: APP_GUARD, useClass: ThrottlerGuard },
     // Глобально: любой новый роут закрыт, пока не помечен @Public.
+    // Первым: лимит запросов считается на репетитора, которого определяет этот guard.
     { provide: APP_GUARD, useClass: JwtAuthGuard },
+    { provide: APP_GUARD, useClass: UserThrottlerGuard },
   ],
 })
 export class AppModule {}

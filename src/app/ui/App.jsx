@@ -12,6 +12,7 @@ import { LessonPage } from '../../pages/lesson/index.js'
 import { AddStudentForm } from '../../features/add-student/index.js'
 import { AddLessonSheet } from '../../features/add-lesson/index.js'
 import { ImportFromTelegram } from '../../features/import-from-telegram/index.js'
+import { ImportSchedule } from '../../features/import-schedule/index.js'
 import { Onboarding } from '../../features/onboarding/index.js'
 import { useStore } from '../model/useStore.js'
 import { backLabel, backPast, backTarget, LIST_VIEWS, openView, TABS } from '../model/navigation.js'
@@ -76,7 +77,7 @@ export default function App() {
 
   // Из store берём отдельные функции, а не сам объект: он новый на каждый
   // рендер, и зависеть от него значило бы пересоздавать обработчики каждый раз
-  const { addStudent, addLesson, deleteLesson, deleteStudent, setStatus } = store
+  const { addStudent, addLesson, addSeries, stopSeries, deleteLesson, deleteStudent, setStatus } = store
 
   const handleAddStudent = useCallback(
     (input) => {
@@ -88,17 +89,28 @@ export default function App() {
 
   const handleAddLesson = useCallback(
     (input) => {
-      addLesson(input)
+      if (input.repeat) addSeries(input)
+      else addLesson(input)
       setSheet(null)
       setCalendarDate(input.date)
       const student = studentById.get(input.studentId)
+      const added = input.repeat ? 'Занятие добавлено на каждую неделю' : 'Занятие добавлено'
       setToast(
         student?.inviteStatus === 'accepted'
-          ? `Занятие добавлено. Бот напомнит ${student.name.split(' ')[0]} заранее`
-          : 'Занятие добавлено'
+          ? `${added}. Бот напомнит ${student.name.split(' ')[0]} заранее`
+          : added
       )
     },
-    [addLesson, studentById]
+    [addLesson, addSeries, studentById]
+  )
+
+  const handleStopSeries = useCallback(
+    (lesson) => {
+      const gone = new Set(stopSeries(lesson))
+      setView((current) => backPast(current, (v) => v.name === 'lesson' && gone.has(v.id)))
+      setToast('Занятия удалены, повтор остановлен')
+    },
+    [stopSeries]
   )
 
   const handleDeleteLesson = useCallback(
@@ -182,6 +194,7 @@ export default function App() {
           lessons={store.lessons}
           onOpenLesson={openLesson}
           onAddLesson={() => setSheet({ date: todayISO() })}
+          onImportSchedule={() => open({ name: 'importSchedule' })}
           onInvite={() => open({ name: 'importStudents' })}
           onAddStudent={() => open({ name: 'addStudent' })}
         />
@@ -195,6 +208,7 @@ export default function App() {
           onSelectDate={setCalendarDate}
           onOpenLesson={openLesson}
           onAdd={() => setSheet({ date: calendarDate })}
+          onImportSchedule={() => open({ name: 'importSchedule' })}
         />
       ) : null}
 
@@ -243,6 +257,7 @@ export default function App() {
           onSetStatus={handleSetStatus}
           onTogglePaid={store.togglePaid}
           onDelete={handleDeleteLesson}
+          onStopSeries={handleStopSeries}
           subjects={store.profile?.subjects ?? []}
           onAddSubject={(name) => {
             const mine = store.profile?.subjects ?? []
@@ -265,6 +280,19 @@ export default function App() {
           onCancel={goBack}
           onDone={(message) => {
             setView({ name: 'students' })
+            setToast(message)
+          }}
+        />
+      ) : null}
+
+      {view.name === 'importSchedule' ? (
+        <ImportSchedule
+          students={store.students}
+          defaultPrice={defaultPrice}
+          onImport={store.importSchedule}
+          onCancel={goBack}
+          onDone={(message) => {
+            setView({ name: 'calendar' })
             setToast(message)
           }}
         />

@@ -1,6 +1,7 @@
 import { ConflictException, Injectable, Logger, NotFoundException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { PrismaService } from '../prisma/prisma.service'
+import { ReminderPlanner } from '../reminders/reminder-planner.service'
 import { generateInviteCode, isValidInviteCodeFormat } from './invite-code'
 import { inviteMessage } from './invite-message'
 
@@ -29,6 +30,7 @@ export class InvitesService {
 
   constructor(
     private readonly prisma: PrismaService,
+    private readonly reminders: ReminderPlanner,
     config: ConfigService,
   ) {
     // Убираем @, если он попал в переменную: иначе ссылка
@@ -198,6 +200,14 @@ export class InvitesService {
       // человек уже заведён у этого репетитора другой карточкой.
       this.logger.warn(`Не удалось привязать ученика: ${(e as Error).message}`)
       return null
+    }
+
+    // Занятия, поставленные до подключения, остались без напоминаний:
+    // писать было некуда. Планируем их сейчас. Сбой не отменяет привязку.
+    try {
+      await this.reminders.replanForStudent(invite.student.id)
+    } catch (e) {
+      this.logger.error(`Напоминания после подключения не запланированы: ${(e as Error).message}`)
     }
 
     return {

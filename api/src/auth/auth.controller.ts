@@ -17,7 +17,7 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   login(@Body() dto: LoginDto): Promise<LoginResult> {
-    return this.auth.login(dto.initData)
+    return this.auth.login(dto.initData, dto.timezone)
   }
 
   /** Проверка токена — нужна фронту, чтобы понять, жива ли сессия. */
