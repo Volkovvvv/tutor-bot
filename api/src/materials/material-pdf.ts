@@ -23,7 +23,7 @@ export interface PdfInput {
   subject: string
   topic: string
   studentName: string
-  /** «10 класс · ЕГЭ» */
+  /** «10 класс» */
   level: string | null
   /** «29 сентября 2026» */
   date: string
@@ -199,8 +199,15 @@ function drawHeader(doc: PDFKit.PDFDocument, input: PdfInput, x: number, width: 
   const padTop = 40
   const padBottom = 30
 
+  // Знак свой у предмета; правый край — там же, где у «÷» из макета
+  const sign = subjectSign(input.subject)
+  const signRight = W - 110 + doc.font('display-semi').fontSize(84).widthOfString('÷')
+  const signLeft = signRight - doc.font(sign.font).fontSize(84).widthOfString(sign.text)
+  // Заголовок не заходит на знак: длинный переносится на вторую строку
+  const topicW = Math.min(width - 60, signLeft - x - 12)
+
   doc.font('display').fontSize(30)
-  const topicH = doc.heightOfString(topic, { width: width - 60, lineGap: -4 })
+  const topicH = doc.heightOfString(topic, { width: topicW, lineGap: -4 })
   const headerH = padTop + 18 + 12 + topicH + 10 + 14 + padBottom
 
   const grad = doc.linearGradient(0, 0, W * 0.6, headerH * 1.6)
@@ -218,11 +225,8 @@ function drawHeader(doc: PDFKit.PDFDocument, input: PdfInput, x: number, width: 
   // Декоративный знак, как в макете
   doc.save()
   doc.rotate(-12, { origin: [W - 70, 50] })
-  // Знак свой у предмета; правый край — там же, где у «÷» из макета
-  const sign = subjectSign(input.subject)
-  const signRight = W - 110 + doc.font('display-semi').fontSize(84).widthOfString('÷')
   doc.font(sign.font).fontSize(84).fillColor('#ffffff').fillOpacity(0.28)
-  doc.text(sign.text, signRight - doc.widthOfString(sign.text), 6, { lineBreak: false })
+  doc.text(sign.text, signLeft, 6, { lineBreak: false })
   doc.restore()
 
   // Плашка «Физика · 9 класс»
@@ -235,7 +239,7 @@ function drawHeader(doc: PDFKit.PDFDocument, input: PdfInput, x: number, width: 
   doc.fillColor(C.accentInk).text(pill, x + 9, pillY + 4, { characterSpacing: 1, lineBreak: false })
 
   doc.font('display').fontSize(30).fillColor('#ffffff')
-  doc.text(topic, x, pillY + 18 + 12, { width: width - 60, lineGap: -4 })
+  doc.text(topic, x, pillY + 18 + 12, { width: topicW, lineGap: -4 })
 
   doc.font('body-semi').fontSize(10.5).fillColor(C.ink)
   doc.text(`${input.studentName} · ${input.date}`, x, doc.y + 8, { width })

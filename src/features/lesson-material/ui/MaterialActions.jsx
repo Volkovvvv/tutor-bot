@@ -15,7 +15,7 @@ export default function MaterialActions({
   onChangeTopic,
   onDelete,
 }) {
-  // 'pdf' | 'more' | null — какое меню открыто
+  // 'pdf' | 'send' | 'more' | null — какое меню открыто
   const [menu, setMenu] = useState(null)
   const close = () => setMenu(null)
   const run = (action) => () => {
@@ -26,6 +26,7 @@ export default function MaterialActions({
   const downloading = busy === 'pdf' || busy === 'pdf-answers'
   // Без ответов выбирать не из чего — качаем сразу
   const onPdf = hasAnswers ? () => setMenu(menu === 'pdf' ? null : 'pdf') : () => onDownload(false)
+  const onSendClick = hasAnswers ? () => setMenu(menu === 'send' ? null : 'send') : () => onSend(false)
 
   return (
     <>
@@ -38,6 +39,19 @@ export default function MaterialActions({
               <span className={s.itemHint}>Теория, пример и задачи</span>
             </button>
             <button type="button" role="menuitem" className={s.item} onClick={run(() => onDownload(true))}>
+              <span className={s.itemTitle}>С ответами</span>
+              <span className={s.itemHint}>Для вас, с решениями задач</span>
+            </button>
+          </div>
+        ) : null}
+
+        {menu === 'send' ? (
+          <div className={cx(s.menu, s.right)} role="menu">
+            <button type="button" role="menuitem" className={s.item} onClick={run(() => onSend(false))}>
+              <span className={s.itemTitle}>Без ответов</span>
+              <span className={s.itemHint}>Файл, который можно переслать ученику</span>
+            </button>
+            <button type="button" role="menuitem" className={s.item} onClick={run(() => onSend(true))}>
               <span className={s.itemTitle}>С ответами</span>
               <span className={s.itemHint}>Для вас, с решениями задач</span>
             </button>
@@ -74,9 +88,11 @@ export default function MaterialActions({
 
         <button
           type="button"
-          className={cx(s.round, sent && s.done)}
-          onClick={run(onSend)}
+          className={cx(s.round, sent && s.done, menu === 'send' && s.pressed)}
+          onClick={onSendClick}
           disabled={!!busy}
+          aria-haspopup={hasAnswers ? 'menu' : undefined}
+          aria-expanded={hasAnswers ? menu === 'send' : undefined}
           aria-label={sent ? 'PDF отправлен в Telegram — отправить ещё раз' : 'Прислать PDF в Telegram'}
         >
           {busy === 'send' ? (

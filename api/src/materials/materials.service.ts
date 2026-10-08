@@ -147,7 +147,7 @@ export class MaterialsService {
     const lesson = await this.prisma.lesson.findFirst({
       where: { id: lessonId, tutorId },
       select: {
-        student: { select: { grade: true, goal: true } },
+        student: { select: { grade: true } },
         tutor: { select: { country: true, materialsGenerated: true } },
       },
     })
@@ -164,7 +164,6 @@ export class MaterialsService {
       subject,
       topic,
       grade: lesson.student.grade,
-      goal: lesson.student.goal,
       country: lesson.tutor.country,
       homeworkCount: dto.homeworkCount ?? DEFAULT_HOMEWORK_COUNT,
       wishes: dto.wishes?.trim() || null,
@@ -345,15 +344,18 @@ export class MaterialsService {
   /**
    * PDF уходит репетитору в чат с ботом, а не ученику: так репетитор
    * видит файл перед пересылкой, и это работает, даже если ученик
-   * к боту не подключён. Версия без ответов — её и пересылают.
+   * к боту не подключён. Версия без ответов — для пересылки ученику,
+   * с ответами — для самого репетитора.
    */
-  async sendToTutor(tutorId: string, lessonId: string): Promise<{ sent: true }> {
-    const { pdf, filename, topic, studentName, tgId } = await this.buildPdf(tutorId, lessonId, false)
+  async sendToTutor(tutorId: string, lessonId: string, withAnswers = false): Promise<{ sent: true }> {
+    const { pdf, filename, topic, studentName, tgId } = await this.buildPdf(tutorId, lessonId, withAnswers)
     const result = await this.bot.sendDocument(
       tgId,
       pdf,
       filename,
-      `«${topic}» для ${studentName}. Перешлите файл ученику.`,
+      withAnswers
+        ? `«${topic}» для ${studentName}, с ответами. Ученику не пересылайте.`
+        : `«${topic}» для ${studentName}. Перешлите файл ученику.`,
     )
 
     if (!result.ok) {
@@ -378,7 +380,7 @@ export class MaterialsService {
       where: { lessonId, tutorId },
       select: {
         ...MATERIAL_SELECT,
-        lesson: { select: { startsAt: true, student: { select: { name: true, grade: true, goal: true } } } },
+        lesson: { select: { startsAt: true, student: { select: { name: true, grade: true } } } },
         tutor: {
           select: {
             displayName: true,
@@ -398,7 +400,7 @@ export class MaterialsService {
       subject: row.subject,
       topic: row.topic,
       studentName: lesson.student.name,
-      level: levelLabel(lesson.student.grade, lesson.student.goal),
+      level: levelLabel(lesson.student.grade),
       date: formatDate(lesson.startsAt, tutor.user.timezone),
       tutorLine: dative ? `${tutorName} · репетитор по ${dative}` : tutorName,
       content: toView(row),

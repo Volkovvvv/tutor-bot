@@ -55,8 +55,9 @@ export class MaterialsController {
   send(
     @CurrentUser() user: AuthUser,
     @Param('id', ParseUUIDPipe) lessonId: string,
+    @Body() dto: PdfLinkDto,
   ): Promise<{ sent: true }> {
-    return this.materials.sendToTutor(user.tutorId, lessonId)
+    return this.materials.sendToTutor(user.tutorId, lessonId, dto.answers === true)
   }
 
   @Post('lessons/:id/material/pdf-link')

@@ -59,77 +59,77 @@ type Case = PromptInput & { ahead?: string[] }
 const CASE_SETS: Record<string, Case[]> = {
   // По одной теме на предмет; цели разные, чтобы проверить формат экзаменов.
   main: [
-    { subject: 'Русский язык', topic: 'Деепричастный оборот', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Логарифмические уравнения', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Физика', topic: 'Закон Ома, последовательное и параллельное соединение', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Химия', topic: 'Алканы: номенклатура, изомерия, химические свойства', grade: 11, goal: 'CE', country: 'BY', homeworkCount: 6 },
-    { subject: 'Английский', topic: 'Present Perfect vs Past Simple', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Биология', topic: 'Моногибридное скрещивание, законы Менделя', grade: 10, goal: 'EGE', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Деепричастный оборот', grade: 7, country: 'RU', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Логарифмические уравнения', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Физика', topic: 'Закон Ома, последовательное и параллельное соединение', grade: 8, country: 'BY', homeworkCount: 6 },
+    { subject: 'Химия', topic: 'Алканы: номенклатура, изомерия, химические свойства', grade: 11, country: 'BY', homeworkCount: 6 },
+    { subject: 'Английский', topic: 'Present Perfect vs Past Simple', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Биология', topic: 'Моногибридное скрещивание, законы Менделя', grade: 10, country: 'RU', homeworkCount: 6 },
   ],
   // Предметы, для которых есть карточка формата экзамена
   exam: [
-    { subject: 'Математика', topic: 'Квадратные и дробно-рациональные неравенства', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Арифметическая и геометрическая прогрессии', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Трапеция: средняя линия, площадь', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Н и НН в прилагательных и причастиях', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Знаки препинания в сложноподчинённом предложении', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Паронимы и лексические нормы', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Логарифмические уравнения', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Физика', topic: 'Конденсаторы: ёмкость, заряд, энергия', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Химия', topic: 'Гидролиз солей', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Биология', topic: 'Митоз и мейоз', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Английский', topic: 'Словообразование: суффиксы и отрицательные приставки', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Обособленные определения и обстоятельства', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Физика', topic: 'Архимедова сила, плавание тел', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Химия', topic: 'Реакции ионного обмена', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Биология', topic: 'Кровеносная система человека', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Английский', topic: 'Passive Voice', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Квадратные и дробно-рациональные неравенства', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Арифметическая и геометрическая прогрессии', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Трапеция: средняя линия, площадь', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Н и НН в прилагательных и причастиях', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Знаки препинания в сложноподчинённом предложении', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Паронимы и лексические нормы', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Логарифмические уравнения', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Физика', topic: 'Конденсаторы: ёмкость, заряд, энергия', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Химия', topic: 'Гидролиз солей', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Биология', topic: 'Митоз и мейоз', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Английский', topic: 'Словообразование: суффиксы и отрицательные приставки', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Обособленные определения и обстоятельства', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Физика', topic: 'Архимедова сила, плавание тел', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Химия', topic: 'Реакции ионного обмена', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Биология', topic: 'Кровеносная система человека', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Английский', topic: 'Passive Voice', grade: 9, country: 'RU', homeworkCount: 6 },
   ],
   // Классы, для которых есть карточка учебной программы
   program: [
-    { subject: 'Математика', topic: 'Сложение и вычитание обыкновенных дробей', grade: 5, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Формулы сокращённого умножения', grade: 7, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Теорема Виета', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Арифметическая прогрессия', grade: 9, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Тригонометрические уравнения', grade: 10, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Логарифмические уравнения', grade: 11, goal: 'CE', country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Сложение и вычитание обыкновенных дробей', grade: 5, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Формулы сокращённого умножения', grade: 7, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Теорема Виета', grade: 8, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Арифметическая прогрессия', grade: 9, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Тригонометрические уравнения', grade: 10, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Логарифмические уравнения', grade: 11, country: 'BY', homeworkCount: 6 },
   ],
   // Не забегает ли модель вперёд: 7–8 классы, в ahead — слова из следующих классов
   ahead: [
-    { subject: 'Математика', topic: 'Линейные уравнения с одной переменной', grade: 7, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['дискриминант', '√', 'квадратный корень', 'квадратное уравнение', 'парабол'] },
-    { subject: 'Математика', topic: 'Разложение многочлена на множители', grade: 7, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['дискриминант', '√', 'квадратный корень', 'виет', 'куб суммы', 'сумма кубов'] },
-    { subject: 'Математика', topic: 'Свойства равнобедренного треугольника', grade: 7, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['пифагор', '√', 'синус', 'косинус', 'подобн', 'средняя линия'] },
-    { subject: 'Математика', topic: 'Сумма углов треугольника, внешний угол', grade: 7, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['пифагор', '√', 'синус', 'косинус', 'подобн', 'вписанн'] },
-    { subject: 'Математика', topic: 'Теорема Пифагора', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['синус', 'косинус', 'тангенс', 'теорема косинусов'] },
-    { subject: 'Математика', topic: 'Квадратные уравнения, дискриминант', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['рациональная дробь', 'дробно-рациональн', 'метод интервалов', 'прогресси'] },
+    { subject: 'Математика', topic: 'Линейные уравнения с одной переменной', grade: 7, country: 'BY', homeworkCount: 6, ahead: ['дискриминант', '√', 'квадратный корень', 'квадратное уравнение', 'парабол'] },
+    { subject: 'Математика', topic: 'Разложение многочлена на множители', grade: 7, country: 'BY', homeworkCount: 6, ahead: ['дискриминант', '√', 'квадратный корень', 'виет', 'куб суммы', 'сумма кубов'] },
+    { subject: 'Математика', topic: 'Свойства равнобедренного треугольника', grade: 7, country: 'BY', homeworkCount: 6, ahead: ['пифагор', '√', 'синус', 'косинус', 'подобн', 'средняя линия'] },
+    { subject: 'Математика', topic: 'Сумма углов треугольника, внешний угол', grade: 7, country: 'BY', homeworkCount: 6, ahead: ['пифагор', '√', 'синус', 'косинус', 'подобн', 'вписанн'] },
+    { subject: 'Математика', topic: 'Теорема Пифагора', grade: 8, country: 'BY', homeworkCount: 6, ahead: ['синус', 'косинус', 'тангенс', 'теорема косинусов'] },
+    { subject: 'Математика', topic: 'Квадратные уравнения, дискриминант', grade: 8, country: 'BY', homeworkCount: 6, ahead: ['рациональная дробь', 'дробно-рациональн', 'метод интервалов', 'прогресси'] },
   ],
   // Быстрый взгляд на карточки программы: по одной теме на 6, 7 и 8 классы
   sample: [
-    { subject: 'Математика', topic: 'Пропорция и её свойства', grade: 6, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['отрицательн', 'модуль', 'линейное уравнение', 'функци'] },
-    { subject: 'Математика', topic: 'Признаки равенства треугольников', grade: 7, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['пифагор', '√', 'синус', 'косинус', 'подобн', 'накрест лежащ', 'сумма углов'] },
-    { subject: 'Математика', topic: 'Квадратные уравнения, дискриминант', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, ahead: ['рациональная дробь', 'дробно-рациональн', 'метод интервалов', 'парабол'] },
+    { subject: 'Математика', topic: 'Пропорция и её свойства', grade: 6, country: 'BY', homeworkCount: 6, ahead: ['отрицательн', 'модуль', 'линейное уравнение', 'функци'] },
+    { subject: 'Математика', topic: 'Признаки равенства треугольников', grade: 7, country: 'BY', homeworkCount: 6, ahead: ['пифагор', '√', 'синус', 'косинус', 'подобн', 'накрест лежащ', 'сумма углов'] },
+    { subject: 'Математика', topic: 'Квадратные уравнения, дискриминант', grade: 8, country: 'BY', homeworkCount: 6, ahead: ['рациональная дробь', 'дробно-рациональн', 'метод интервалов', 'парабол'] },
     // Та же тема с пожеланиями репетитора
-    { subject: 'Математика', topic: 'Квадратные уравнения', grade: 8, goal: 'SCHOOL', country: 'BY', homeworkCount: 6, wishes: 'В теории разбери неполные уравнения. В домашке два неполных уравнения и одна текстовая задача про площадь прямоугольника.' },
+    { subject: 'Математика', topic: 'Квадратные уравнения', grade: 8, country: 'BY', homeworkCount: 6, wishes: 'В теории разбери неполные уравнения. В домашке два неполных уравнения и одна текстовая задача про площадь прямоугольника.' },
   ],
   // Русский язык: темы, где модели ошибаются чаще всего — правила с исключениями
   // и особыми формами, спорные нормы, пунктуация с вариантами. Последние две — для контроля.
   ru: [
-    { subject: 'Русский язык', topic: 'Н и НН в прилагательных', grade: null, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Н и НН в причастиях и отглагольных прилагательных', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Деепричастный оборот', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Причастный оборот', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'НЕ с прилагательными', grade: 6, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Приставки ПРЕ- и ПРИ-', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Вводные слова', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Тире между подлежащим и сказуемым', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: 'Чередование гласных в корнях -лаг-/-лож- и -раст-/-ращ-/-рос-', grade: 6, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-    { subject: 'Русский язык', topic: '-тся и -ться в глаголах', grade: 5, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Н и НН в прилагательных', grade: null, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Н и НН в причастиях и отглагольных прилагательных', grade: 11, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Деепричастный оборот', grade: 7, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Причастный оборот', grade: 7, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'НЕ с прилагательными', grade: 6, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Приставки ПРЕ- и ПРИ-', grade: 9, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Вводные слова', grade: 8, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Тире между подлежащим и сказуемым', grade: 8, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: 'Чередование гласных в корнях -лаг-/-лож- и -раст-/-ращ-/-рос-', grade: 6, country: 'RU', homeworkCount: 6 },
+    { subject: 'Русский язык', topic: '-тся и -ться в глаголах', grade: 5, country: 'RU', homeworkCount: 6 },
   ],
   // Класс и предмет, для которых есть карточка учебника
   textbook: [
-    { subject: 'Математика', topic: 'Сложение чисел с разными знаками', grade: 6, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Основные задачи на проценты', grade: 6, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
-    { subject: 'Математика', topic: 'Деление на десятичную дробь', grade: 6, goal: 'SCHOOL', country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Сложение чисел с разными знаками', grade: 6, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Основные задачи на проценты', grade: 6, country: 'BY', homeworkCount: 6 },
+    { subject: 'Математика', topic: 'Деление на десятичную дробь', grade: 6, country: 'BY', homeworkCount: 6 },
   ],
 }
 const CASES = CASE_SETS[SET] ?? []
@@ -315,7 +315,7 @@ async function judge(entries: Entry[]): Promise<void> {
       const input = CASES.find((c) => c.topic === e.topic)!
       // Проверяющий не знает, какая модель автор
       const user = [
-        `Предмет: ${input.subject}. Ученик: ${levelLabel(input.grade, input.goal) ?? 'класс не указан'}. Страна: ${input.country === 'BY' ? 'Беларусь' : 'Россия'}.`,
+        `Предмет: ${input.subject}. Ученик: ${levelLabel(input.grade) ?? 'класс не указан'}. Страна: ${input.country === 'BY' ? 'Беларусь' : 'Россия'}.`,
         `Тема урока: «${input.topic}».`,
         '',
         'Материал:',
@@ -424,7 +424,7 @@ ${rows.map((r) => `<tr><td>${esc(r.model)}</td><td>${r.generated}</td><td>${f(r.
 <p>Проверяющий: ${esc(JUDGE)}, вслепую. Красным — задания и теория, где он нашёл ошибку.</p>
 <h2>Материалы</h2>
 <table class="grid"><thead><tr><th class="case">Тема</th>${rows.map((r) => `<th>${esc(r.model)}</th>`).join('')}</tr></thead>
-<tbody>${CASES.map((c) => `<tr><th class="case">${esc(c.subject)}<br><small>${esc(c.topic)}<br>${esc(levelLabel(c.grade, c.goal) ?? '')}</small></th>${rows.map((r) => `<td>${cell(entries.find((e) => e.model === r.model && e.topic === c.topic))}</td>`).join('')}</tr>`).join('')}</tbody></table>
+<tbody>${CASES.map((c) => `<tr><th class="case">${esc(c.subject)}<br><small>${esc(c.topic)}<br>${esc(levelLabel(c.grade) ?? '')}</small></th>${rows.map((r) => `<td>${cell(entries.find((e) => e.model === r.model && e.topic === c.topic))}</td>`).join('')}</tr>`).join('')}</tbody></table>
 </html>`
   const out = resolve(OUT_DIR, `report${SUFFIX}.html`)
   mkdirSync(OUT_DIR, { recursive: true })

@@ -1,8 +1,9 @@
-import { Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
+import { BadRequestException, Injectable, Logger, ServiceUnavailableException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import {
   buildMessages,
   type MaterialContent,
+  isRefusal,
   parseContent,
   type PromptInput,
   type ReasoningEffort,
@@ -76,6 +77,10 @@ export class AiService {
     const messages = buildMessages(input)
     for (let attempt = 1; attempt <= ATTEMPTS; attempt++) {
       const raw = await this.complete(messages)
+      // Отказ — не сбой: повторять запрос незачем, лимит не тратится
+      if (raw && isRefusal(raw)) {
+        throw new BadRequestException('Тема не подходит: материалы собираются только по школьным предметам')
+      }
       const content = raw ? parseContent(raw) : null
       if (content) return { content, model: this.model }
       this.logger.warn(`Ответ ИИ не разобран (попытка ${attempt}): ${raw?.slice(0, 300)}`)

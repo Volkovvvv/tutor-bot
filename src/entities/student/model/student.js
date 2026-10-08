@@ -23,25 +23,12 @@ export const BOT_BADGES = {
   accepted: ['В боте', 'positive'],
 }
 
-// К чему готовится ученик — под это ИИ собирает материалы урока.
-// Значения — как в API (StudyGoal).
-export const GOAL_OPTIONS = [
-  { value: 'SCHOOL', label: 'Школьная программа' },
-  { value: 'OGE', label: 'ОГЭ (Россия)' },
-  { value: 'EGE', label: 'ЕГЭ (Россия)' },
-  { value: 'CE', label: 'ЦЭ (Беларусь)' },
-  { value: 'CT', label: 'ЦТ (Беларусь)' },
-]
-
-const GOAL_SHORT = { OGE: 'ОГЭ', EGE: 'ЕГЭ', CE: 'ЦЭ', CT: 'ЦТ' }
-
 export const GRADES = Array.from({ length: 11 }, (_, i) => i + 1)
 
-// «10 класс · ЕГЭ», «8 класс», «ЦЭ» или null
+// «10 класс» или null
 export function levelLabel(student) {
   if (!student) return null
-  const parts = [student.grade ? `${student.grade} класс` : null, GOAL_SHORT[student.goal] ?? null]
-  return parts.filter(Boolean).join(' · ') || null
+  return student.grade ? `${student.grade} класс` : null
 }
 
 // Настройки уведомлений конкретного ученика.

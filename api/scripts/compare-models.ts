@@ -24,18 +24,18 @@ const DEFAULT_MODELS = [
 // Темы, на которых модели чаще всего ошибаются: орфография, расчёты,
 // уравнения реакций, генетика.
 const CASES: PromptInput[] = [
-  { subject: 'Русский язык', topic: 'Н и НН в суффиксах прилагательных и причастий', grade: 8, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-  { subject: 'Русский язык', topic: 'Запятые при причастном и деепричастном оборотах', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-  { subject: 'Математика', topic: 'Квадратные уравнения, теорема Виета', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-  { subject: 'Математика', topic: 'Логарифмы и их свойства', grade: 11, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-  { subject: 'Физика', topic: 'Закон Ома для участка цепи, последовательное и параллельное соединение', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-  { subject: 'Физика', topic: 'Закон сохранения импульса', grade: 10, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-  { subject: 'Химия', topic: 'Окислительно-восстановительные реакции, метод электронного баланса', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
-  { subject: 'Химия', topic: 'Расчёты по уравнению реакции: количество вещества и масса', grade: 8, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-  { subject: 'Биология', topic: 'Моногибридное скрещивание, законы Менделя', grade: 10, goal: 'EGE', country: 'RU', homeworkCount: 6 },
-  { subject: 'Биология', topic: 'Митоз и мейоз', grade: 9, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-  { subject: 'Английский', topic: 'Present Perfect vs Past Simple', grade: 7, goal: 'SCHOOL', country: 'RU', homeworkCount: 6 },
-  { subject: 'Английский', topic: 'Conditionals: zero, first, second', grade: 9, goal: 'OGE', country: 'RU', homeworkCount: 6 },
+  { subject: 'Русский язык', topic: 'Н и НН в суффиксах прилагательных и причастий', grade: 8, country: 'RU', homeworkCount: 6 },
+  { subject: 'Русский язык', topic: 'Запятые при причастном и деепричастном оборотах', grade: 7, country: 'RU', homeworkCount: 6 },
+  { subject: 'Математика', topic: 'Квадратные уравнения, теорема Виета', grade: 8, country: 'RU', homeworkCount: 6 },
+  { subject: 'Математика', topic: 'Логарифмы и их свойства', grade: 11, country: 'RU', homeworkCount: 6 },
+  { subject: 'Физика', topic: 'Закон Ома для участка цепи, последовательное и параллельное соединение', grade: 8, country: 'RU', homeworkCount: 6 },
+  { subject: 'Физика', topic: 'Закон сохранения импульса', grade: 10, country: 'RU', homeworkCount: 6 },
+  { subject: 'Химия', topic: 'Окислительно-восстановительные реакции, метод электронного баланса', grade: 9, country: 'RU', homeworkCount: 6 },
+  { subject: 'Химия', topic: 'Расчёты по уравнению реакции: количество вещества и масса', grade: 8, country: 'RU', homeworkCount: 6 },
+  { subject: 'Биология', topic: 'Моногибридное скрещивание, законы Менделя', grade: 10, country: 'RU', homeworkCount: 6 },
+  { subject: 'Биология', topic: 'Митоз и мейоз', grade: 9, country: 'RU', homeworkCount: 6 },
+  { subject: 'Английский', topic: 'Present Perfect vs Past Simple', grade: 7, country: 'RU', homeworkCount: 6 },
+  { subject: 'Английский', topic: 'Conditionals: zero, first, second', grade: 9, country: 'RU', homeworkCount: 6 },
 ]
 
 const CONCURRENCY = 4
@@ -153,7 +153,7 @@ function renderReport(models: string[], results: Result[]): string {
 
   const rows = CASES.map((input) => {
     const cells = models.map((m) => `<td>${renderCell(byKey.get(`${m}|${input.topic}`)!)}</td>`).join('')
-    return `<tr><th class="case">${esc(input.subject)}<br><small>${esc(input.topic)}<br>${esc(levelLabel(input.grade, input.goal) ?? '')}</small></th>${cells}</tr>`
+    return `<tr><th class="case">${esc(input.subject)}<br><small>${esc(input.topic)}<br>${esc(levelLabel(input.grade) ?? '')}</small></th>${cells}</tr>`
   }).join('')
 
   return `<!doctype html><html lang="ru"><meta charset="utf-8"><title>Сравнение моделей</title>

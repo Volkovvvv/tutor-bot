@@ -32,11 +32,10 @@ export function studentFromApi(s) {
   return {
     id: s.id,
     name: s.name,
-    // Свободная пометка репетитора: «9 класс · ОГЭ»
+    // Свободная пометка репетитора: «любит задачи»
     note: s.note ?? null,
-    // Класс (1–11 или null) и цель подготовки — для материалов урока
+    // Класс (1–11 или null) — для материалов урока
     grade: s.grade ?? null,
-    goal: s.goal ?? 'SCHOOL',
     // API отдаёт копейки — UI всегда работал в рублях.
     price: Math.round(s.price / 100),
     tgId: null,
@@ -59,13 +58,12 @@ export function studentFromApi(s) {
   }
 }
 
-export function studentToApi({ name, price, grade, goal }) {
+export function studentToApi({ name, price, grade }) {
   // UI собирает цену в рублях как введённую пользователем строку/число.
   return {
     name,
     price: Math.round(Number(price) * 100),
     ...(grade ? { grade } : {}),
-    ...(goal ? { goal } : {}),
   }
 }
 

@@ -152,8 +152,6 @@ export default function LessonMaterial({
   const subjectName = subject === OTHER ? customSubject.trim() : subject
   const canGenerate = topic.trim().length >= 3 && subjectName.length >= 2 && !busy
   const level = levelLabel(student)
-  // Экзамен сам задаёт страну; выбор программы нужен только без экзамена
-  const noExam = !student || student.goal === 'SCHOOL'
 
   const generate = async () => {
     setBusy('generate')
@@ -189,11 +187,11 @@ export default function LessonMaterial({
     }
   }
 
-  const send = async () => {
+  const send = async (answers) => {
     setBusy('send')
     try {
-      await api.post(`/lessons/${lessonId}/material/send`)
-      setSent(true)
+      await api.post(`/lessons/${lessonId}/material/send`, { answers })
+      setSent(answers ? 'answers' : 'plain')
     } catch (e) {
       reportError(e.message)
     } finally {
@@ -291,11 +289,9 @@ export default function LessonMaterial({
           <FieldGroup label="Домашнее задание">
             <Segmented className={s.softGroup} label="Сколько заданий" options={COUNT_OPTIONS} value={count} onChange={setCount} />
           </FieldGroup>
-          {noExam ? (
-            <FieldGroup label="Школьная программа">
-              <Segmented className={s.softGroup} label="Страна" options={COUNTRY_OPTIONS} value={country} onChange={onSetCountry} />
-            </FieldGroup>
-          ) : null}
+          <FieldGroup label="Школьная программа">
+            <Segmented className={s.softGroup} label="Страна" options={COUNTRY_OPTIONS} value={country} onChange={onSetCountry} />
+          </FieldGroup>
 
           {student ? (
             <button type="button" className={s.level} onClick={() => onOpenStudent(student.id)}>
@@ -336,7 +332,13 @@ export default function LessonMaterial({
             footer={tutorName ? `${tutorName} · репетитор` : 'Репетитор'}
             sign={subjectSign(material.subject)}
           />
-          {sent ? <Note>PDF без ответов — в чате с ботом. Перешлите его ученику.</Note> : null}
+          {sent ? (
+            <Note>
+              {sent === 'answers'
+                ? 'PDF с ответами — в чате с ботом. Ученику его не пересылайте.'
+                : 'PDF без ответов — в чате с ботом. Перешлите его ученику.'}
+            </Note>
+          ) : null}
           <MaterialActions
             busy={busy}
             sent={sent}

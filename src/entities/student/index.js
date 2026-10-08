@@ -2,7 +2,6 @@ export {
   INVITE_STATUS,
   INVITE_LABELS,
   BOT_BADGES,
-  GOAL_OPTIONS,
   GRADES,
   levelLabel,
   createStudent,
