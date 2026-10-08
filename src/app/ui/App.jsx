@@ -295,6 +295,7 @@ export default function App() {
           students={store.students}
           defaultPrice={defaultPrice}
           onImport={store.importSchedule}
+          onNotify={setToast}
           onCancel={goBack}
           onDone={(message) => {
             setView({ name: 'calendar' })

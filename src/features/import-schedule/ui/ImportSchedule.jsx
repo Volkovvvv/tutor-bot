@@ -43,7 +43,7 @@ import s from './ImportSchedule.module.css'
  * Ничего не сохраняется, пока репетитор не посмотрел черновик: перепутанные
  * 16:00 и 18:00 — это напоминание ученику не в то время, от имени репетитора.
  */
-export default function ImportSchedule({ students, defaultPrice, onImport, onCancel, onDone }) {
+export default function ImportSchedule({ students, defaultPrice, onImport, onCancel, onDone, onNotify }) {
   // null — ещё не распознавали; массив — черновик (может быть пустым)
   const [rows, setRows] = useState(null)
   const [text, setText] = useState('')
@@ -53,6 +53,8 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
   const [repeat, setRepeat] = useState(true)
   // Цены новых учеников по ключу имени; без записи — цена из профиля
   const [prices, setPrices] = useState({})
+  // Одна цена для всех новых учеников: с фото их обычно много, а цена у них общая
+  const [allPrice, setAllPrice] = useState('')
   const fileRef = useRef(null)
   // Ученики, созданные неудавшейся попыткой сохранения (см. importSchedule в useStore)
   const createdRef = useRef({})
@@ -90,15 +92,29 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
 
   const fresh = useMemo(() => (rows ? newStudentsOf(rows) : []), [rows])
   const lessons = useMemo(() => (rows ? buildLessons(rows) : []), [rows])
-  const priceOf = (key) => prices[key] ?? (defaultPrice ? String(defaultPrice) : '')
+  const priceOf = (key) => prices[key] ?? (allPrice || (defaultPrice ? String(defaultPrice) : ''))
 
   const included = rows?.filter((row) => row.on) ?? []
   const invalid = included.filter((row) => !isRowValid(row)).length
-  const pricesOk = fresh.every((st) => Number(priceOf(st.key)) > 0)
-  const valid = lessons.length > 0 && invalid === 0 && pricesOk && !busy
+  const noPrice = fresh.filter((st) => !(Number(priceOf(st.key)) > 0))
+
+  // Что мешает сохранить; null — ничего. Кнопка при этом остаётся нажимаемой:
+  // молча отключённая кнопка выглядит как сломанная, а тост объясняет причину
+  const problem =
+    lessons.length === 0
+      ? 'Включите хотя бы одно занятие'
+      : invalid > 0
+        ? 'Укажите день, время и ученика во всех включённых строках'
+        : noPrice.length > 0
+          ? `Укажите цену занятия: ${noPrice.map((st) => st.name).join(', ')}`
+          : null
 
   const save = async () => {
-    if (!valid) return
+    if (busy) return
+    if (problem) {
+      onNotify(problem)
+      return
+    }
     setBusy(true)
     const result = await onImport({
       newStudents: fresh.map((st) => ({ ...st, price: Number(priceOf(st.key)) })),
@@ -254,6 +270,21 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
       {fresh.length > 0 ? (
         <Section title="Новые ученики — цена за занятие, ₽">
           <Stack>
+            {fresh.length > 1 ? (
+              <Field label="Одна цена для всех, ₽">
+                <Input
+                  type="number"
+                  inputMode="numeric"
+                  value={allPrice}
+                  onChange={(e) => {
+                    setAllPrice(e.target.value)
+                    // Общая цена важнее прежде введённых по одной: иначе она «не работает»
+                    setPrices({})
+                  }}
+                  placeholder="1500"
+                />
+              </Field>
+            ) : null}
             {fresh.map((st) => (
               <label key={st.key} className={s.price}>
                 <span className={s.priceName}>{st.name}</span>
@@ -276,8 +307,8 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
       </FieldGroup>
 
       <div className={s.summary}>
-        {invalid > 0
-          ? 'Укажите день, время и ученика во всех включённых строках.'
+        {problem
+          ? `${problem}.`
           : lessons.length > 0
             ? `Первое занятие — ${dayMonth(lessons.reduce((a, l) => (l.date < a ? l.date : a), lessons[0].date))}.` +
               (repeat ? ' Дальше — каждую неделю, пока не остановите.' : '') +
@@ -290,7 +321,7 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
       <MainButton
         text={busy ? 'Сохраняем…' : lessons.length > 0 ? `Добавить ${pluralLessons(lessons.length)}${repeat ? ' в неделю' : ''}` : 'Добавить'}
         onClick={save}
-        disabled={!valid}
+        disabled={busy}
       />
     </Screen>
   )
