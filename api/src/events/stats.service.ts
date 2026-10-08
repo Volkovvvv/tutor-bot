@@ -30,6 +30,20 @@ export class StatsService {
     return formatStats(buildStats({ events: rows.map(toStatEvent), tutors, seen24h, seen7d }))
   }
 
+  /**
+   * Сбрасывает отметку «прошёл знакомство» у кабинета с этим Telegram ID:
+   * при следующем открытии приложение снова покажет онбординг. Нужно
+   * администратору, чтобы пересмотреть знакомство глазами нового репетитора.
+   * Предметы, цена и ученики остаются. false — кабинета нет.
+   */
+  async resetOnboarding(tgId: number): Promise<boolean> {
+    const { count } = await this.prisma.tutor.updateMany({
+      where: { user: { tgId: BigInt(tgId) } },
+      data: { onboardedAt: null },
+    })
+    return count > 0
+  }
+
   /** Что делал один репетитор; null — такого пользователя нет. */
   async timeline(username: string): Promise<string | null> {
     const user = await this.prisma.user.findFirst({

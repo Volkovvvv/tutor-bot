@@ -125,6 +125,26 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
     })
 
+    // Показать онбординг заново — только администратору, на его же кабинете
+    this.bot.command('onboarding', async (ctx) => {
+      if (!this.adminId || ctx.from?.id !== this.adminId) {
+        await ctx.reply(`Я не умею отвечать на сообщения. ${this.openHint()}`, this.openKeyboard())
+        return
+      }
+      try {
+        const done = await this.stats.resetOnboarding(this.adminId)
+        await ctx.reply(
+          done
+            ? 'Готово. Закройте приложение и откройте снова — знакомство покажется с начала. Предметы, ученики и занятия остались.'
+            : 'Кабинета ещё нет: откройте приложение один раз.',
+          this.openKeyboard(),
+        )
+      } catch (e) {
+        this.logger.error(`Онбординг не сброшен: ${(e as Error).message}`)
+        await ctx.reply('Не получилось, подробности в логе')
+      }
+    })
+
     // Любое другое сообщение: бот не диалоговый, объясняем это прямо.
     this.bot.on('message', async (ctx) => {
       await ctx.reply(
