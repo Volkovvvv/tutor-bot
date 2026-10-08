@@ -14,6 +14,7 @@ import { AddLessonSheet } from '../../features/add-lesson/index.js'
 import { ImportFromTelegram } from '../../features/import-from-telegram/index.js'
 import { ImportSchedule } from '../../features/import-schedule/index.js'
 import { SendFeedback } from '../../features/send-feedback/index.js'
+import { Surprise } from '../../features/surprise/index.js'
 import { Onboarding } from '../../features/onboarding/index.js'
 import { useStore } from '../model/useStore.js'
 import { backLabel, backPast, backTarget, LIST_VIEWS, openView, TABS } from '../model/navigation.js'
@@ -181,6 +182,7 @@ export default function App() {
           onInvite={store.createAndInvite}
           onNotify={setToast}
         />
+        <Surprise telegramName={store.profile.telegramName} />
         <Toast message={toast} onHide={hideToast} />
       </AppShell>
     )
@@ -334,6 +336,7 @@ export default function App() {
         />
       ) : null}
 
+      <Surprise telegramName={store.profile?.telegramName} />
       <Toast message={toast} onHide={hideToast} />
     </AppShell>
   )
