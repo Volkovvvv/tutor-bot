@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { currencySign } from '../../../shared/lib/format.js'
 import { shareText, tg } from '../../../shared/api/telegram.js'
 import { cx } from '../../../shared/lib/cx.js'
 import {
@@ -10,6 +11,7 @@ import {
   Input,
   PageTitle,
   Pill,
+  Segmented,
   Stack,
   Switch,
 } from '../../../shared/ui/index.js'
@@ -37,6 +39,11 @@ const REMINDERS = [
 
 const STEPS = 6
 
+const COUNTRIES = [
+  { value: 'RU', label: 'Россия · ₽' },
+  { value: 'BY', label: 'Беларусь · BYN' },
+]
+
 // Шаг «Домашка за минуту»: лист собирается на глазах, по разделу за такт.
 // Такт 0 — ещё не запускали, 4 — готово; подпись — что «пишется» сейчас.
 const DEMO_TICK_MS = 700
@@ -55,6 +62,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify, onImpo
   const [busy, setBusy] = useState(false)
 
   const [subjects, setSubjects] = useState(profile.subjects)
+  const [country, setCountry] = useState(profile.country ?? 'RU')
   const [name, setName] = useState(profile.displayName ?? profile.telegramName ?? '')
   const [price, setPrice] = useState(profile.defaultPrice ? String(profile.defaultPrice) : '')
   const [reminders, setReminders] = useState({
@@ -150,7 +158,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify, onImpo
 
   const primary = [
     { label: 'Начать', onClick: () => setStep(1), disabled: false },
-    { label: 'Дальше', disabled: false, onClick: () => save({ subjects }, 2) },
+    { label: 'Дальше', disabled: false, onClick: () => save({ subjects, country }, 2) },
     demoTick === 0
       ? { label: 'Сгенерировать', disabled: false, onClick: runDemo }
       : demoTick < DEMO_DONE
@@ -222,6 +230,11 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify, onImpo
               </button>
             ))}
           </div>
+          <Stack gap={8}>
+            <span className={s.countryLabel}>Где вы преподаёте?</span>
+            <Segmented label="Страна" options={COUNTRIES} value={country} onChange={setCountry} />
+            <p className={s.hint}>Цены и заработок покажем в рублях или белорусских рублях (BYN), материалы подберём под школьную программу.</p>
+          </Stack>
         </>
       ) : null}
 
@@ -366,7 +379,7 @@ export default function Onboarding({ profile, onSave, onInvite, onNotify, onImpo
               placeholder="Например, Аня Петрова"
             />
           </Field>
-          <Field label="Цена занятия, ₽">
+          <Field label={`Цена занятия, ${currencySign()}`}>
             <Input
               inputMode="numeric"
               value={price}

@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
 import { applyTheme, tg } from '../../shared/api/telegram.js'
 import { todayISO } from '../../shared/lib/date.js'
+import { setCurrency } from '../../shared/lib/format.js'
 import { AppShell, EmptyState, TabBar, Toast } from '../../shared/ui/index.js'
 import { indexById } from '../../entities/student/index.js'
 import { TodayPage } from '../../pages/today/index.js'
@@ -20,6 +21,8 @@ import { backLabel, backPast, backTarget, LIST_VIEWS, openView, TABS } from '../
 
 export default function App() {
   const store = useStore()
+  // Валюта по стране репетитора; экраны ниже читают её при рендере (см. shared/lib/format.js)
+  setCurrency(store.profile?.country)
   const [view, setView] = useState({ name: 'today' })
   const [toast, setToast] = useState('')
   // Выбранный день календаря живёт здесь: переживает уход на другую вкладку

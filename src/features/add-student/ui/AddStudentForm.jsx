@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { currencySign } from '../../../shared/lib/format.js'
 import { GRADES } from '../../../entities/student/index.js'
 import {
   BackButton,
@@ -39,7 +40,7 @@ export default function AddStudentForm({ defaultPrice, onSave, onCancel }) {
         />
       </Field>
 
-      <Field label="Цена за занятие, ₽">
+      <Field label={`Цена за занятие, ${currencySign()}`}>
         <Input
           type="number"
           inputMode="numeric"

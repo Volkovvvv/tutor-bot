@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { currencySign } from '../../../shared/lib/format.js'
 import { Button, Field, FieldGroup, Input, Row, Segmented, Sheet } from '../../../shared/ui/index.js'
 
 const DURATIONS = [45, 60, 90, 120].map((value) => ({ value, label: `${value} мин` }))
@@ -39,7 +40,7 @@ export default function EditLessonSheet({ lesson, price, onSave, onClose }) {
       <FieldGroup label="Длительность">
         <Segmented label="Длительность" options={DURATIONS} value={duration} onChange={setDuration} />
       </FieldGroup>
-      <Field label="Цена, ₽">
+      <Field label={`Цена, ${currencySign()}`}>
         <Input
           inputMode="numeric"
           value={cost}

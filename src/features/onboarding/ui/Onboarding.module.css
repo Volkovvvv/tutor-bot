@@ -356,3 +356,21 @@
   text-underline-offset: 3px;
   cursor: pointer;
 }
+
+.countryLabel {
+  font-family: var(--font-display);
+  font-size: 14px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hint {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--ink);
+  opacity: 0.8;
+  text-wrap: pretty;
+}

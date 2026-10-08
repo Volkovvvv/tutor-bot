@@ -1,4 +1,5 @@
 import { useCallback, useState } from 'react'
+import { currencySign } from '../../../shared/lib/format.js'
 import {
   BackButton,
   Field,
@@ -67,7 +68,7 @@ export default function ImportFromTelegram({ defaultPrice, onCreate, onCancel, o
         />
       </Field>
 
-      <Field label="Цена за занятие, ₽">
+      <Field label={`Цена за занятие, ${currencySign()}`}>
         <Input
           type="number"
           inputMode="numeric"

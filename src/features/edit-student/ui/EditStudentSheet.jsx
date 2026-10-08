@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { currencySign } from '../../../shared/lib/format.js'
 import { Button, Field, Input, Sheet } from '../../../shared/ui/index.js'
 
 /**
@@ -26,7 +27,7 @@ export default function EditStudentSheet({ student, onSave, onClose }) {
       <Field label="Имя">
         <Input value={name} maxLength={100} onChange={(e) => setName(e.target.value)} />
       </Field>
-      <Field label="Цена за занятие, ₽">
+      <Field label={`Цена за занятие, ${currencySign()}`}>
         <Input
           inputMode="numeric"
           value={price}

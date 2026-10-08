@@ -1,5 +1,21 @@
+// Валюта репетитора зависит от страны в профиле: Россия — рубли, Беларусь — BYN.
+// Хранится здесь, а не в контексте React: форматируют деньги два десятка мест,
+// и протаскивать валюту в каждое пришлось бы пропсом. App задаёт её при каждом
+// рендере (setCurrency идемпотентна), поэтому экраны всегда видят актуальную.
+const CURRENCY_SIGNS = { RU: '₽', BY: 'BYN' }
+let sign = CURRENCY_SIGNS.RU
+
+export function setCurrency(country) {
+  sign = CURRENCY_SIGNS[country] ?? CURRENCY_SIGNS.RU
+}
+
+/** Знак валюты для подписей полей ввода: «Цена за занятие, ₽». */
+export function currencySign() {
+  return sign
+}
+
 export function formatMoney(value) {
-  return value.toLocaleString('ru-RU') + ' ₽'
+  return `${value.toLocaleString('ru-RU')} ${sign}`
 }
 
 // Русское склонение по числу: plural(5, 'занятие', 'занятия', 'занятий')

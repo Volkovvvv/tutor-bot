@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { api } from '../../../shared/api/client.js'
 import { cx } from '../../../shared/lib/cx.js'
 import { dayMonth } from '../../../shared/lib/date.js'
-import { plural, pluralLessons } from '../../../shared/lib/format.js'
+import { plural, pluralLessons, currencySign } from '../../../shared/lib/format.js'
 import { fileToJpegDataUrl } from '../../../shared/lib/image.js'
 import {
   BackButton,
@@ -268,10 +268,10 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
       </Stack>
 
       {fresh.length > 0 ? (
-        <Section title="Новые ученики — цена за занятие, ₽">
+        <Section title={`Новые ученики — цена за занятие, ${currencySign()}`}>
           <Stack>
             {fresh.length > 1 ? (
-              <Field label="Одна цена для всех, ₽">
+              <Field label={`Одна цена для всех, ${currencySign()}`}>
                 <Input
                   type="number"
                   inputMode="numeric"
