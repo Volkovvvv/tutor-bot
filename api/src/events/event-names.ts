@@ -15,6 +15,7 @@ export const SERVER_EVENTS = [
   'material_deleted',
   'material_checked',
   'limit_hit',
+  'content_blocked',
   'pdf_downloaded',
   'pdf_sent',
   'material_forwarded',

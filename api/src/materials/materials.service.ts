@@ -43,6 +43,7 @@ import {
   templateContent,
 } from './material-content'
 import { renderMaterialPdf } from './material-pdf'
+import { hasProfanity } from './profanity'
 import { canonicalSubject } from './subjects'
 
 // В журнал событий предмет идёт только из этого списка: введённый руками
@@ -169,6 +170,12 @@ export class MaterialsService {
   /** Собрать материалы заново; прежние для этого урока заменяются. */
   async generate(tutorId: string, lessonId: string, dto: GenerateMaterialDto): Promise<MaterialView> {
     const startedAt = Date.now()
+    // До базы и до ИИ: ни запроса, ни пробного лимита на явный мат
+    const blocked = hasProfanity(dto.topic) ? 'topic' : dto.wishes && hasProfanity(dto.wishes) ? 'wishes' : null
+    if (blocked) {
+      await this.events.track(tutorId, 'content_blocked', { field: blocked })
+      throw new BadRequestException('Тема не подходит: материалы собираются только по школьным предметам')
+    }
     const lesson = await this.prisma.lesson.findFirst({
       where: { id: lessonId, tutorId },
       select: {
