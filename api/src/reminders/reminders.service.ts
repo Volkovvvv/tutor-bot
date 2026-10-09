@@ -58,7 +58,7 @@ export class RemindersService {
                 archivedAt: true,
                 notify: { select: { enabled: true } },
                 user: { select: { tgId: true } },
-                tutor: { select: { user: { select: { timezone: true } } } },
+                tutor: { select: { bannedAt: true, user: { select: { timezone: true } } } },
               },
             },
           },
@@ -74,6 +74,11 @@ export class RemindersService {
     for (const reminder of due) {
       const lesson = reminder.lesson
       const student = lesson.student
+
+      if (student.tutor.bannedAt !== null) {
+        await this.markSent(reminder.id, 'Отменено: кабинет закрыт администратором')
+        continue
+      }
 
       // Условия могли измениться с момента планирования: занятие отменили,
       // ученика заархивировали, уведомления выключили, связь с ботом

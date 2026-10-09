@@ -1,4 +1,4 @@
-import { Injectable, Logger, UnauthorizedException } from '@nestjs/common'
+import { ForbiddenException, Injectable, Logger, UnauthorizedException } from '@nestjs/common'
 import { ConfigService } from '@nestjs/config'
 import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
@@ -104,6 +104,9 @@ export class AuthService {
 
       return { user, tutor, zoneChanged: before !== null && before.timezone !== user.timezone }
     })
+
+    const banned = await this.prisma.tutor.findUnique({ where: { id: tutor.id }, select: { bannedAt: true } })
+    if (banned?.bannedAt) throw new ForbiddenException('Доступ к кабинету закрыт')
 
     // Тихие часы считаются в таймзоне репетитора: сменилась — уже запланированные
     // напоминания могли прийтись на ночь. Вход этого не ждёт.

@@ -125,6 +125,36 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
     })
 
+    // Закрыть и открыть кабинет репетитора — только администратору
+    for (const [command, banned] of [['ban', true], ['unban', false]] as const) {
+      this.bot.command(command, async (ctx) => {
+        if (!this.adminId || ctx.from?.id !== this.adminId) {
+          await ctx.reply('Я только присылаю напоминания о занятиях и не умею отвечать на сообщения.')
+          return
+        }
+        const who = ctx.match?.trim() ?? ''
+        if (!who) {
+          await ctx.reply(`Укажите репетитора: /${command} @username или /${command} 123456789`)
+          return
+        }
+        try {
+          const result = await this.stats.setBanned(who, banned, this.adminId)
+          await ctx.reply(
+            result === 'ok'
+              ? banned
+                ? `Кабинет ${who} закрыт: вход и напоминания отключены, данные сохранены. Вернуть: /unban ${who}`
+                : `Кабинет ${who} снова открыт.`
+              : result === 'admin'
+                ? 'Себя закрыть нельзя.'
+                : `Репетитора ${who} нет`,
+          )
+        } catch (e) {
+          this.logger.error(`/${command} не выполнен: ${(e as Error).message}`)
+          await ctx.reply('Не получилось, подробности в логе')
+        }
+      })
+    }
+
     // Показать онбординг заново — только администратору, на его же кабинете
     this.bot.command('onboarding', async (ctx) => {
       if (!this.adminId || ctx.from?.id !== this.adminId) {

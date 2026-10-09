@@ -77,6 +77,10 @@ model Tutor {
   // Сколько расписаний распознал ИИ (фото или текст); неудачные попытки не считаются.
   scheduleImports Int @default(0)
 
+  // Кабинет закрыт администратором (/ban в боте): вход, запросы и напоминания
+  // ученикам отключены, данные остаются. null — доступ есть.
+  bannedAt DateTime?
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

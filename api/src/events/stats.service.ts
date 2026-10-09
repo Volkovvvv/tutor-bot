@@ -44,6 +44,32 @@ export class StatsService {
     return count > 0
   }
 
+  /**
+   * Закрывает или открывает кабинет. who — @username или числовой Telegram ID.
+   * Администратора закрыть нельзя: опечатка в команде не должна оставить без доступа
+   * того, кто может её отменить.
+   */
+  async setBanned(who: string, banned: boolean, adminTgId: number): Promise<'ok' | 'none' | 'admin'> {
+    const ident = who.trim().replace(/^@/, '')
+    if (!ident) return 'none'
+    const user = await this.prisma.user.findFirst({
+      where: {
+        tutorProfile: { isNot: null },
+        ...(/^\d+$/.test(ident)
+          ? { tgId: BigInt(ident) }
+          : { username: { equals: ident, mode: 'insensitive' } }),
+      },
+      select: { tgId: true, tutorProfile: { select: { id: true } } },
+    })
+    if (!user?.tutorProfile) return 'none'
+    if (Number(user.tgId) === adminTgId) return 'admin'
+    await this.prisma.tutor.update({
+      where: { id: user.tutorProfile.id },
+      data: { bannedAt: banned ? new Date() : null },
+    })
+    return 'ok'
+  }
+
   /** Что делал один репетитор; null — такого пользователя нет. */
   async timeline(username: string): Promise<string | null> {
     const user = await this.prisma.user.findFirst({

@@ -1,12 +1,14 @@
 import {
   type CanActivate,
   type ExecutionContext,
+  ForbiddenException,
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common'
 import { Reflector } from '@nestjs/core'
 import { JwtService } from '@nestjs/jwt'
 import type { Request } from 'express'
+import { PrismaService } from '../../prisma/prisma.service'
 import type { AuthUser, JwtPayload } from '../auth.types'
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator'
 
@@ -21,6 +23,7 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwt: JwtService,
     private readonly reflector: Reflector,
+    private readonly prisma: PrismaService,
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
@@ -45,6 +48,11 @@ export class JwtAuthGuard implements CanActivate {
     if (typeof payload.sub !== 'string' || typeof payload.tid !== 'string') {
       throw new UnauthorizedException('Недействительный токен')
     }
+
+    // Токен живёт дни, а бан должен действовать сразу: смотрим в базу на каждый запрос
+    // (по первичному ключу — дёшево).
+    const tutor = await this.prisma.tutor.findUnique({ where: { id: payload.tid }, select: { bannedAt: true } })
+    if (tutor?.bannedAt) throw new ForbiddenException('Доступ к кабинету закрыт')
 
     request.user = { userId: payload.sub, tutorId: payload.tid }
     return true
