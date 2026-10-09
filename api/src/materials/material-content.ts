@@ -63,10 +63,22 @@ export const DEFAULT_MATERIALS_LIMIT = 10
  * открыть всем безлимит. Снять лимит можно только явно — нулём.
  */
 export function materialsLimit(raw: unknown): number | null {
-  if (raw === undefined || raw === null || raw === '') return DEFAULT_MATERIALS_LIMIT
+  return trialLimit(raw, DEFAULT_MATERIALS_LIMIT)
+}
+
+/** Пробный лимит, пока AI_IMPORTS_LIMIT не задан: столько расписаний ИИ распознает репетитору. */
+export const DEFAULT_IMPORTS_LIMIT = 5
+
+/** Лимит распознаваний расписания из настройки AI_IMPORTS_LIMIT; правила те же, что у материалов. */
+export function importsLimit(raw: unknown): number | null {
+  return trialLimit(raw, DEFAULT_IMPORTS_LIMIT)
+}
+
+function trialLimit(raw: unknown, fallback: number): number | null {
+  if (raw === undefined || raw === null || raw === '') return fallback
   const limit = Number(raw)
   if (limit === 0) return null
-  return Number.isInteger(limit) && limit > 0 ? limit : DEFAULT_MATERIALS_LIMIT
+  return Number.isInteger(limit) && limit > 0 ? limit : fallback
 }
 
 export const REASONING_EFFORTS = ['low', 'medium', 'high', 'none'] as const

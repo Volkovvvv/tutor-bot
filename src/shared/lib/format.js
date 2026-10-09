@@ -18,6 +18,14 @@ export function formatMoney(value) {
   return `${value.toLocaleString('ru-RU')} ${sign}`
 }
 
+// Подпись пробного лимита ИИ: «Осталось 3 из 10 материалов».
+// quota — { used, limit } из профиля; без лимита (или профиль старый) — пусто.
+export function quotaLeft(quota, many) {
+  if (!quota || quota.limit === null) return ''
+  const left = Math.max(0, quota.limit - quota.used)
+  return `Осталось ${left} из ${quota.limit} ${many}`
+}
+
 // Русское склонение по числу: plural(5, 'занятие', 'занятия', 'занятий')
 export function plural(n, one, few, many) {
   const mod10 = n % 10

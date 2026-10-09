@@ -138,6 +138,8 @@ export function tutorFromApi(t) {
     notifyBeforeMinutes: t.notifyBeforeMinutes,
     notifyDebtReminder: t.notifyDebtReminder,
     onboardedAt: t.onboardedAt,
+    // Пробные лимиты ИИ: { used, limit }, limit: null — без лимита
+    limits: t.limits ?? null,
   }
 }
 

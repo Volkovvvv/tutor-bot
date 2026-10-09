@@ -2,7 +2,7 @@ import { useCallback, useMemo, useRef, useState } from 'react'
 import { api } from '../../../shared/api/client.js'
 import { cx } from '../../../shared/lib/cx.js'
 import { dayMonth } from '../../../shared/lib/date.js'
-import { plural, pluralLessons, currencySign } from '../../../shared/lib/format.js'
+import { plural, pluralLessons, currencySign, quotaLeft } from '../../../shared/lib/format.js'
 import { fileToJpegDataUrl } from '../../../shared/lib/image.js'
 import {
   BackButton,
@@ -43,7 +43,17 @@ import s from './ImportSchedule.module.css'
  * Ничего не сохраняется, пока репетитор не посмотрел черновик: перепутанные
  * 16:00 и 18:00 — это напоминание ученику не в то время, от имени репетитора.
  */
-export default function ImportSchedule({ students, defaultPrice, onImport, onCancel, onDone, onNotify }) {
+export default function ImportSchedule({
+  students,
+  defaultPrice,
+  // Пробный лимит распознаваний: { used, limit } или null
+  quota,
+  onQuotaUsed,
+  onImport,
+  onCancel,
+  onDone,
+  onNotify,
+}) {
   // null — ещё не распознавали; массив — черновик (может быть пустым)
   const [rows, setRows] = useState(null)
   const [text, setText] = useState('')
@@ -66,13 +76,14 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
       try {
         const res = await api.post('/lessons/import/recognize', body)
         setRows(toDraft(res.rows, students))
+        onQuotaUsed?.()
       } catch (e) {
         setError(e.message)
       } finally {
         setBusy(false)
       }
     },
-    [students]
+    [students, onQuotaUsed]
   )
 
   const pickFile = async (e) => {
@@ -137,6 +148,8 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
   }
 
   if (rows === null) {
+    const left = quotaLeft(quota, 'распознаваний')
+    const spent = Boolean(quota) && quota.limit !== null && quota.used >= quota.limit
     return (
       <Screen>
         <BackButton onClick={onCancel} />
@@ -145,10 +158,12 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
         <Note>
           Сфотографируйте расписание из блокнота или загрузите скриншот — приложение
           прочитает учеников, дни и время. Перед сохранением всё можно проверить и поправить.
+          {left ? ` ${left}.` : ''}
         </Note>
+        {spent ? <Note>Пробный лимит распознаваний исчерпан. Занятия можно добавлять вручную.</Note> : null}
 
         <input ref={fileRef} type="file" accept="image/*" className={s.file} onChange={pickFile} />
-        <Button onClick={() => fileRef.current?.click()} disabled={busy}>
+        <Button onClick={() => fileRef.current?.click()} disabled={busy || spent}>
           {busy ? 'Читаем расписание…' : 'Выбрать фото'}
         </Button>
 
@@ -166,7 +181,7 @@ export default function ImportSchedule({ students, defaultPrice, onImport, onCan
         <Button
           variant="secondary"
           onClick={() => recognize({ text: text.trim() })}
-          disabled={busy || text.trim().length === 0}
+          disabled={busy || spent || text.trim().length === 0}
         >
           Разобрать текст
         </Button>

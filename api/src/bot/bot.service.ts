@@ -252,16 +252,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     const url = `${base}/api/bot/webhook`
     await this.bot.api.setWebhook(url, {
       secret_token: this.config.getOrThrow<string>('BOT_WEBHOOK_SECRET'),
-      // Пропускаем накопившиеся за простой обновления: напоминания
-      // всё равно шлёт планировщик, а старые /start уже неактуальны.
-      drop_pending_updates: true,
     })
     this.logger.log(`Webhook установлен: ${url}`)
   }
 
   private async startPolling(): Promise<void> {
     // Снимаем webhook, иначе Telegram не отдаёт обновления через getUpdates.
-    await this.bot.api.deleteWebhook({ drop_pending_updates: true })
+    // Накопившиеся за перезапуск обновления не выбрасываем: среди них /start
+    // ученика по приглашению — потеряв его, ученик останется не привязан.
+    await this.bot.api.deleteWebhook()
     // start() не завершается, пока бот работает, поэтому не ждём его:
     // иначе инициализация модуля никогда не закончится.
     void this.bot.start({

@@ -37,6 +37,8 @@ export default function LessonPage({
   country,
   onSetCountry,
   tutorName,
+  materialsQuota,
+  onQuotaUsed,
 }) {
   // Удаление необратимо и уносит материалы урока — сначала спрашиваем
   const [confirming, setConfirming] = useState(false)
@@ -84,6 +86,8 @@ export default function LessonPage({
         onSetCountry={onSetCountry}
         onOpenStudent={onOpenStudent}
         tutorName={tutorName}
+        quota={materialsQuota}
+        onQuotaUsed={onQuotaUsed}
         date={`${dayMonth(lesson.date)} ${lesson.date.slice(0, 4)}`}
         onDelete={() => setConfirming(true)}
       />

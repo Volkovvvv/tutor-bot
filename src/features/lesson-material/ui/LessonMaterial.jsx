@@ -4,6 +4,7 @@ import { api, API_URL } from '../../../shared/api/client.js'
 import { downloadFile } from '../../../shared/api/telegram.js'
 import { track } from '../../../shared/api/track.js'
 import { cx } from '../../../shared/lib/cx.js'
+import { quotaLeft } from '../../../shared/lib/format.js'
 import { SUBJECTS, subjectSign } from '../../../shared/lib/subjects.js'
 import {
   Button,
@@ -81,6 +82,9 @@ export default function LessonMaterial({
   tutorName,
   date,
   onDelete,
+  // Пробный лимит материалов: { used, limit } или null
+  quota,
+  onQuotaUsed,
 }) {
   const [material, setMaterial] = useState(null)
   const [loaded, setLoaded] = useState(false)
@@ -170,6 +174,7 @@ export default function LessonMaterial({
       setMaterial(next)
       setEditing(false)
       setSent(false)
+      onQuotaUsed?.()
       // Новый предмет запоминается в профиле: в следующий раз он в списке
       if (!subjects.includes(subjectName)) onAddSubject(subjectName)
     } catch (e) {
@@ -326,6 +331,7 @@ export default function LessonMaterial({
           <span className={s.hint}>
             ИИ напишет короткую теорию, разберёт пример и подберёт {count} {count === 4 ? 'задачи' : 'задач'} на дом.
             PDF оформится в вашем стиле, с вашим именем.
+            {quotaLeft(quota, 'материалов') ? ` ${quotaLeft(quota, 'материалов')}.` : ''}
           </span>
           <Button onClick={generate} disabled={!canGenerate}>Собрать PDF</Button>
           {editing ? (

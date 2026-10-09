@@ -124,6 +124,11 @@ class EnvVars {
   @IsNumber()
   @IsOptional()
   AI_MATERIALS_LIMIT?: number
+
+  // Сколько расписаний ИИ распознает одному репетитору; не задан — 5, ноль — без лимита.
+  @IsNumber()
+  @IsOptional()
+  AI_IMPORTS_LIMIT?: number
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvVars {

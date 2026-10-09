@@ -276,6 +276,8 @@ export default function App() {
           country={store.profile?.country ?? 'RU'}
           onSetCountry={(country) => store.updateProfile({ country })}
           tutorName={store.profile?.displayName ?? store.profile?.telegramName ?? ''}
+          materialsQuota={store.profile?.limits?.materials ?? null}
+          onQuotaUsed={store.refreshProfile}
         />
       ) : null}
 
@@ -299,6 +301,8 @@ export default function App() {
         <ImportSchedule
           students={store.students}
           defaultPrice={defaultPrice}
+          quota={store.profile?.limits?.imports ?? null}
+          onQuotaUsed={store.refreshProfile}
           onImport={store.importSchedule}
           onNotify={setToast}
           onCancel={goBack}

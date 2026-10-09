@@ -21,6 +21,7 @@ export const SERVER_EVENTS = [
   'retention_answer',
   'import_recognized',
   'import_failed',
+  'import_limit_hit',
   'series_created',
 ] as const
 

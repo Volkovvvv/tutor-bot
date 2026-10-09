@@ -335,6 +335,15 @@ export function useStore() {
       })
   }, [])
 
+  // После сборки материала или распознавания расписания: счётчики лимитов
+  // ведёт сервер. Сбой молчит — это только подпись «осталось N».
+  const refreshProfile = useCallback(() => {
+    api
+      .get('/tutor')
+      .then((res) => setProfile(tutorFromApi(res)))
+      .catch(() => {})
+  }, [])
+
   // Правка карточки: имя, цена, класс. Цена на сервере — в копейках.
   const updateStudent = useCallback((id, patch) => {
     const before = studentsRef.current.find((s) => s.id === id)
@@ -362,6 +371,7 @@ export function useStore() {
     lessons,
     profile,
     updateProfile,
+    refreshProfile,
     inviteLinks,
     addStudent,
     createAndInvite,
