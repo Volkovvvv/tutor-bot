@@ -1,10 +1,16 @@
 import { monthByStudent } from '../../../entities/lesson/index.js'
 import { formatMoney, pluralLessons } from '../../../shared/lib/format.js'
-import { EmptyState, Group, GroupRow, PageTitle, Screen, Section } from '../../../shared/ui/index.js'
+import { EmptyState, Group, GroupRow, PageTitle, Screen, Section, Segmented } from '../../../shared/ui/index.js'
 import { MonthSummary } from '../../../widgets/month-summary/index.js'
 import s from './MoneyPage.module.css'
 
-export default function MoneyPage({ students, lessons, onOpenStudent }) {
+// Валюта идёт за страной в профиле: та же настройка, что в онбординге
+const CURRENCY_OPTIONS = [
+  { value: 'RU', label: 'Россия · ₽' },
+  { value: 'BY', label: 'Беларусь · BYN' },
+]
+
+export default function MoneyPage({ students, lessons, country, onSetCountry, onOpenStudent }) {
   const rows = monthByStudent(lessons, students)
 
   return (
@@ -34,6 +40,10 @@ export default function MoneyPage({ students, lessons, onOpenStudent }) {
             ))}
           </Group>
         )}
+      </Section>
+
+      <Section title="Валюта">
+        <Segmented label="Страна и валюта" options={CURRENCY_OPTIONS} value={country} onChange={onSetCountry} />
       </Section>
     </Screen>
   )

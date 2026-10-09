@@ -56,13 +56,23 @@ export default function LessonPage({
 
       <div className={s.head}>
         {level ? <Pill>{level}</Pill> : null}
-        {student ? (
-          <button type="button" className={s.nameLink} onClick={() => onOpenStudent(student.id)}>
-            <PageTitle>{name} ›</PageTitle>
+        <div className={s.nameRow}>
+          {student ? (
+            <button type="button" className={s.nameLink} onClick={() => onOpenStudent(student.id)}>
+              <PageTitle>{name} ›</PageTitle>
+            </button>
+          ) : (
+            <PageTitle>{name}</PageTitle>
+          )}
+          <button
+            type="button"
+            className={s.edit}
+            onClick={() => setEditing(true)}
+            aria-label="Перенести занятие или изменить цену"
+          >
+            Изменить
           </button>
-        ) : (
-          <PageTitle>{name}</PageTitle>
-        )}
+        </div>
       </div>
 
       <InfoList>
@@ -93,7 +103,6 @@ export default function LessonPage({
       />
 
       <Actions>
-        <Button variant="secondary" onClick={() => setEditing(true)}>Перенести или изменить цену</Button>
         <Button variant="secondary" onClick={onFeedback}>Написать разработчику</Button>
         <Button variant="danger" onClick={() => setConfirming(true)}>Удалить занятие</Button>
       </Actions>

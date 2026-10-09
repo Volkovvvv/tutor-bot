@@ -234,6 +234,8 @@ export default function App() {
         <MoneyPage
           students={store.students}
           lessons={store.lessons}
+          country={store.profile?.country ?? 'RU'}
+          onSetCountry={(country) => store.updateProfile({ country })}
           onOpenStudent={openStudent}
         />
       ) : null}

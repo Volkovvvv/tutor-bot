@@ -4,7 +4,31 @@
   gap: 8px;
 }
 
+/* Имя слева, «Изменить» справа — на одной линии с заголовком */
+.nameRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+/* Перенос и цена занятия: стеклянная пилюля, тише лаймовой метки над именем */
+.edit {
+  flex: none;
+  height: 32px;
+  padding: 0 14px;
+  border: none;
+  border-radius: var(--radius-pill);
+  background: var(--glass);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
 .nameLink {
+  min-width: 0;
   align-self: flex-start;
   padding: 0;
   border: none;
