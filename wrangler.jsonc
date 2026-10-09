@@ -1,0 +1,10 @@
+{
+  // Статичный фронт на Cloudflare: после `npm run build` выкладывается каталог dist.
+  // name должен совпадать с именем проекта в Cloudflare.
+  "name": "tutor-bot",
+  "compatibility_date": "2026-10-01",
+  "assets": {
+    "directory": "./dist",
+    "not_found_handling": "single-page-application"
+  }
+}
