@@ -2,6 +2,8 @@
  * Сводка пилота из журнала событий. Без Nest и базы — чтобы проверять тестами.
  */
 
+import { sourceLabel } from '../telegram/source'
+
 export interface StatEvent {
   tutorId: string
   name: string
@@ -14,6 +16,10 @@ export interface StatsInput {
   tutors: number
   seen24h: number
   seen7d: number
+  /** Репетиторы по источнику (User.source); без источника сюда не входят. */
+  sources: Record<string, number>
+  /** Сколько репетиторов ответили боту, зачем пришли. */
+  whyAnswered: number
 }
 
 /** Доля правок, начиная с которой материал считается «сильно переписанным». */
@@ -43,6 +49,8 @@ export interface StatsSummary {
   upgradeInterest: number
   retention: { very: number; little: number; no: number }
   imports: { recognized: number; failed: number; series: number }
+  sources: Record<string, number>
+  whyAnswered: number
 }
 
 const count = (events: StatEvent[], name: string) => events.filter((e) => e.name === name)
@@ -130,6 +138,8 @@ export function buildStats(input: StatsInput): StatsSummary {
       failed: count(events, 'import_failed').length,
       series: count(events, 'series_created').length,
     },
+    sources: input.sources,
+    whyAnswered: input.whyAnswered,
   }
 }
 
@@ -140,6 +150,9 @@ const REASON_LABELS: Record<string, string> = {
   short: 'слишком коротко',
   design: 'оформление',
 }
+
+/** Метку в ссылке может придумать кто угодно: длинный хвост в сводку не тащим. */
+const SOURCES_SHOWN = 10
 
 const pct = (part: number, whole: number) => (whole === 0 ? '—' : `${Math.round((part / whole) * 100)}%`)
 
@@ -152,10 +165,20 @@ export function formatStats(s: StatsSummary): string {
     .join(', ')
   const asked = s.forwarded.yes + s.forwarded.no
   const answered = s.retention.very + s.retention.little + s.retention.no
+  const known = Object.values(s.sources).reduce((sum, n) => sum + n, 0)
+  const sources = Object.entries(s.sources)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, SOURCES_SHOWN)
+    .map(([source, n]) => `${sourceLabel(source)} ${n}`)
+    .join(', ')
 
   return [
     '📊 Пилот',
     `Репетиторов: ${s.tutors} · заходили за сутки ${s.seen24h}, за неделю ${s.seen7d}`,
+    '',
+    '🧭 Откуда пришли',
+    `${sources || 'Источников пока нет'} · неизвестно: ${Math.max(s.tutors - known, 0)}`,
+    `Ответили, зачем пришли: ${s.whyAnswered}`,
     '',
     '🧾 Материалы',
     `Собрали хотя бы один: ${s.generators} из ${s.tutors}`,
