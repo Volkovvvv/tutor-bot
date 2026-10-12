@@ -4,6 +4,7 @@ import { JwtService } from '@nestjs/jwt'
 import { PrismaService } from '../prisma/prisma.service'
 import { ReminderPlanner } from '../reminders/reminder-planner.service'
 import { InitDataError, verifyInitData } from '../telegram/init-data'
+import { parseSource } from '../telegram/source'
 import type { JwtPayload } from './auth.types'
 
 /** Что получает мини-апп после входа. */
@@ -68,10 +69,16 @@ export class AuthService {
 
     const tg = data.user
     const timezone = validTimezone(timezoneRaw)
+    const source = parseSource(data.startParam)
 
     // Транзакция: пользователь и кабинет создаются вместе либо никак.
     const { user, tutor, zoneChanged } = await this.prisma.$transaction(async (tx) => {
-      const before = await tx.user.findUnique({ where: { tgId: BigInt(tg.id) }, select: { timezone: true } })
+      const before = await tx.user.findUnique({
+        where: { tgId: BigInt(tg.id) },
+        select: { timezone: true, source: true, tutorProfile: { select: { id: true } } },
+      })
+      // Источник — первое касание: у кого кабинет уже был, тот пришёл не по этой ссылке
+      const firstTouch = source !== null && before?.source == null && !before?.tutorProfile
       const user = await tx.user.upsert({
         where: { tgId: BigInt(tg.id) },
         // Профиль в Telegram мог измениться с прошлого входа.
@@ -82,6 +89,7 @@ export class AuthService {
           photoUrl: tg.photoUrl ?? null,
           lastSeenAt: new Date(),
           ...(timezone ? { timezone } : {}),
+          ...(firstTouch ? { source } : {}),
         },
         create: {
           tgId: BigInt(tg.id),
@@ -91,6 +99,7 @@ export class AuthService {
           photoUrl: tg.photoUrl ?? null,
           lastSeenAt: new Date(),
           ...(timezone ? { timezone } : {}),
+          ...(source ? { source } : {}),
         },
       })
 

@@ -35,6 +35,9 @@ model User {
   timezone  String   @default("Europe/Moscow")
   // Когда человек последний раз открывал мини-апп: «заходил ли вообще».
   lastSeenAt DateTime?
+  // Откуда пришёл: метка из ссылки ?start=src_<метка> или ответ на вопрос бота
+  // (self_<код>), см. src/telegram/source.ts. Пишется один раз, null — неизвестно.
+  source    String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

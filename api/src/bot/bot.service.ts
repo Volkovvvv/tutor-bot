@@ -3,6 +3,7 @@ import { ConfigService } from '@nestjs/config'
 import { Bot, GrammyError, HttpError, InlineKeyboard, InputFile } from 'grammy'
 import { StatsService } from '../events/stats.service'
 import { InvitesService } from '../invites/invites.service'
+import { parseSource } from '../telegram/source'
 
 /** Итог попытки отправки — понадобится планировщику для журнала. */
 export interface SendResult {
@@ -18,6 +19,9 @@ export interface InlineButton {
   data: string
 }
 
+/** Разбор текста от человека: ответ бота или null — сообщение не наше. */
+export type TextHandler = (tgId: bigint, text: string) => Promise<string | null>
+
 @Injectable()
 export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly logger = new Logger(BotService.name)
@@ -27,6 +31,7 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
   private readonly adminId: number | null
   /** Адрес мини-аппа для кнопки «Открыть кабинет»; null — кнопки нет. */
   private readonly appUrl: string | null
+  private textHandler: TextHandler | null = null
 
   constructor(
     private readonly invites: InvitesService,
@@ -60,6 +65,14 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
     return this.mode !== 'off'
   }
 
+  /**
+   * Кто читает обычный текст раньше ответа «не умею отвечать». Хук, а не
+   * bot.on('message') снаружи: обработчик ниже забирает сообщение первым.
+   */
+  onText(handler: TextHandler): void {
+    this.textHandler = handler
+  }
+
   /** Экземпляр для webhook-колбэка; планировщик пользуется sendMessage. */
   get instance(): Bot {
     return this.bot
@@ -72,7 +85,15 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       const from = ctx.from
       if (!from) return
 
-      if (!payload) {
+      const source = parseSource(payload)
+      if (source) {
+        // Не дошла метка — человек всё равно должен получить приветствие
+        await this.stats
+          .rememberSource({ id: from.id, firstName: from.first_name, lastName: from.last_name, username: from.username }, source)
+          .catch((e: Error) => this.logger.error(`Источник не записан: ${e.message}`))
+      }
+
+      if (!payload || source) {
         // Без кода приходят и репетиторы, и ученики без ссылки: кто перед нами,
         // бот не знает, поэтому говорит обоим, что делать.
         await ctx.reply(
@@ -177,6 +198,14 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
 
     // Любое другое сообщение: бот не диалоговый, объясняем это прямо.
     this.bot.on('message', async (ctx) => {
+      const text = ctx.message.text?.trim()
+      if (text && !text.startsWith('/') && this.textHandler) {
+        const reply = await this.textHandler(BigInt(ctx.from.id), text)
+        if (reply) {
+          await ctx.reply(reply)
+          return
+        }
+      }
       await ctx.reply(
         `Я не умею отвечать на сообщения. ${this.openHint()} Написать разработчику можно прямо в нём.`,
         this.openKeyboard(),
@@ -204,15 +233,14 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
    * сотни отправок, и падение на одной заблокировавшей бота остановило бы
    * рассылку остальным.
    */
-  async sendMessage(tgId: bigint, text: string, buttons?: InlineButton[]): Promise<SendResult> {
+  async sendMessage(tgId: bigint, text: string, buttons?: InlineButton[], perRow?: number): Promise<SendResult> {
     // Локально бот выключен: не пишем реальным людям из тестовой базы.
     if (this.mode === 'off') {
       this.logger.debug(`BOT_MODE=off, сообщение для ${tgId} не отправлено: ${text}`)
       return { ok: false, error: 'BOT_MODE=off' }
     }
     try {
-      const keyboard = buttons ? new InlineKeyboard() : undefined
-      for (const b of buttons ?? []) keyboard?.text(b.text, b.data)
+      const keyboard = buttons ? BotService.keyboard(buttons, perRow) : undefined
       await this.bot.api.sendMessage(Number(tgId), text, keyboard ? { reply_markup: keyboard } : undefined)
       return { ok: true }
     } catch (e) {
@@ -223,6 +251,16 @@ export class BotService implements OnModuleInit, OnModuleDestroy {
       }
       return { ok: false, error: (e as Error).message }
     }
+  }
+
+  /** Кнопки под сообщением; perRow — сколько в строке, без него все в одну. */
+  static keyboard(buttons: InlineButton[], perRow?: number): InlineKeyboard {
+    const keyboard = new InlineKeyboard()
+    buttons.forEach((b, i) => {
+      if (perRow && i > 0 && i % perRow === 0) keyboard.row()
+      keyboard.text(b.text, b.data)
+    })
+    return keyboard
   }
 
   /** Сообщение администратору (фидбэк репетиторов). Без ADMIN_TG_ID — молча ничего. */

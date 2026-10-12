@@ -17,17 +17,39 @@ export class StatsService {
     const seen = (since: Date) =>
       this.prisma.user.count({ where: { tutorProfile: { isNot: null }, lastSeenAt: { gte: since } } })
 
-    const [tutors, seen24h, seen7d, rows] = await Promise.all([
+    const [tutors, seen24h, seen7d, bySource, whyAnswered, rows] = await Promise.all([
       this.prisma.tutor.count(),
       seen(new Date(now.getTime() - DAY)),
       seen(new Date(now.getTime() - 7 * DAY)),
+      this.prisma.user.groupBy({ by: ['source'], where: { tutorProfile: { isNot: null } }, _count: { _all: true } }),
+      this.prisma.survey.count({ where: { kind: 'WHY', answer: { not: null } } }),
       this.prisma.event.findMany({
         select: { tutorId: true, name: true, props: true, createdAt: true },
         orderBy: { createdAt: 'desc' },
         take: EVENTS_CAP,
       }),
     ])
-    return formatStats(buildStats({ events: rows.map(toStatEvent), tutors, seen24h, seen7d }))
+    const sources: Record<string, number> = {}
+    for (const row of bySource) if (row.source) sources[row.source] = row._count._all
+    return formatStats(buildStats({ events: rows.map(toStatEvent), tutors, seen24h, seen7d, sources, whyAnswered }))
+  }
+
+  /**
+   * Запоминает метку источника за человеком, нажавшим /start по ссылке с меткой.
+   * Кабинета у него ещё нет, поэтому метка ложится на пользователя и дожидается входа.
+   * Первое касание: уже известный источник и уже существующий кабинет не трогаем.
+   */
+  async rememberSource(
+    tg: { id: number; firstName: string; lastName?: string; username?: string },
+    source: string,
+  ): Promise<void> {
+    const tgId = BigInt(tg.id)
+    await this.prisma.user.upsert({
+      where: { tgId },
+      update: {},
+      create: { tgId, firstName: tg.firstName, lastName: tg.lastName ?? null, username: tg.username ?? null, source },
+    })
+    await this.prisma.user.updateMany({ where: { tgId, source: null, tutorProfile: null }, data: { source } })
   }
 
   /**

@@ -129,6 +129,12 @@ class EnvVars {
   @IsNumber()
   @IsOptional()
   AI_IMPORTS_LIMIT?: number
+
+  // "on" — бот после онбординга спрашивает, как репетитор узнал о приложении и зачем пришёл.
+  // Не задан — не спрашивает; метки источника из ссылок пишутся в любом случае.
+  @IsString()
+  @IsOptional()
+  WELCOME_SURVEY?: string
 }
 
 export function validateEnv(raw: Record<string, unknown>): EnvVars {

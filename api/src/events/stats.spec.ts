@@ -7,7 +7,7 @@ const ev = (tutorId: string, name: string, props: Record<string, unknown> = {}, 
   props,
   createdAt: at(day),
 })
-const base = { tutors: 5, seen24h: 2, seen7d: 4 }
+const base = { tutors: 5, seen24h: 2, seen7d: 4, sources: {}, whyAnswered: 0 }
 
 describe('median', () => {
   it('нечётное и чётное число значений', () => {
@@ -120,5 +120,13 @@ describe('formatStats', () => {
     )
     expect(text).toContain('👍 1 · 👎 1 (50% положительных)')
     expect(text).toContain('не та сложность 1')
+  })
+
+  it('источники: сначала частые, остаток — «неизвестно»', () => {
+    const text = formatStats(
+      buildStats({ ...base, events: [], sources: { self_colleague: 1, tgchat: 2 }, whyAnswered: 1 }),
+    )
+    expect(text).toContain('ссылка tgchat 2, от коллеги (ответ) 1 · неизвестно: 2')
+    expect(text).toContain('Ответили, зачем пришли: 1')
   })
 })
