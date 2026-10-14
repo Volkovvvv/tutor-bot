@@ -23,6 +23,18 @@ export function lessonsOn(lessons, date) {
   return sortLessons(lessons.filter((l) => l.date === date))
 }
 
+// Занято ли время: пересекается ли [time, time + duration) с другим занятием дня.
+// Отменённые не мешают; встык (конец одного = начало другого) — не пересечение.
+export function isTimeBusy(lessons, date, time, duration) {
+  const start = toMinutes(time)
+  const end = start + duration
+  return lessons.some((l) => {
+    if (l.date !== date || l.status === 'cancelled') return false
+    const lStart = toMinutes(l.time)
+    return start < lStart + (l.duration ?? 60) && lStart < end
+  })
+}
+
 export function lessonEnd(lesson) {
   return fromMinutes(toMinutes(lesson.time) + (lesson.duration ?? 60))
 }

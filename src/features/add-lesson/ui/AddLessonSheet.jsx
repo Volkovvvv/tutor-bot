@@ -1,8 +1,9 @@
 import { useState } from 'react'
-import { lessonsOn } from '../../../entities/lesson/index.js'
+import { isTimeBusy } from '../../../entities/lesson/index.js'
 import { addDays, dayTitle, parseISO, weekOf, weekdayShort } from '../../../shared/lib/date.js'
 import { cx } from '../../../shared/lib/cx.js'
-import { Button, EmptyState, Input, Sheet, Switch } from '../../../shared/ui/index.js'
+import { DEFAULT_DURATION, isValidDuration } from '../../../shared/lib/duration.js'
+import { Button, DurationField, EmptyState, Input, Sheet, Switch } from '../../../shared/ui/index.js'
 import s from './AddLessonSheet.module.css'
 
 // Самые частые слоты репетитора. Остальное — через «Другое время»
@@ -25,21 +26,20 @@ export default function AddLessonSheet({ students, lessons, date, studentId, onS
   const [pickedStudent, setPickedStudent] = useState(studentId ?? null)
   const [pickedDate, setPickedDate] = useState(date)
   const [time, setTime] = useState(null)
+  const [duration, setDuration] = useState(DEFAULT_DURATION)
   const [repeat, setRepeat] = useState(false)
 
   // Две недели, начиная с понедельника недели исходной даты
   const days = [...weekOf(date), ...weekOf(addDays(date, 7))]
-  const busy = new Set(
-    lessonsOn(lessons, pickedDate)
-      .filter((l) => l.status !== 'cancelled')
-      .map((l) => l.time)
-  )
+  // Пока своя длительность не набрана, слоты считаем по стандартной
+  const span = isValidDuration(duration) ? duration : DEFAULT_DURATION
+  const isBusy = (t) => isTimeBusy(lessons, pickedDate, t, span)
   const names = shortNames(students)
-  const valid = Boolean(pickedStudent && pickedDate && time && !busy.has(time))
+  const valid = Boolean(pickedStudent && pickedDate && time && isValidDuration(duration) && !isBusy(time))
 
   const save = () => {
     if (!valid) return
-    onSave({ studentId: pickedStudent, date: pickedDate, time, repeat })
+    onSave({ studentId: pickedStudent, date: pickedDate, time, duration, repeat })
   }
 
   if (students.length === 0) {
@@ -88,15 +88,20 @@ export default function AddLessonSheet({ students, lessons, date, studentId, onS
       </div>
 
       <div className={s.block}>
+        <span className={s.label}>Длительность</span>
+        <DurationField value={duration} onChange={setDuration} />
+      </div>
+
+      <div className={s.block}>
         <span className={s.label}>Время</span>
         <div className={s.times}>
           {TIMES.map((t) => (
             <button
               key={t}
               type="button"
-              disabled={busy.has(t)}
+              disabled={isBusy(t)}
               aria-pressed={time === t}
-              className={cx(s.time, time === t && s.on, busy.has(t) && s.busy)}
+              className={cx(s.time, time === t && !isBusy(t) && s.on, isBusy(t) && s.busy)}
               onClick={() => setTime(t)}
             >
               {t}
@@ -112,6 +117,7 @@ export default function AddLessonSheet({ students, lessons, date, studentId, onS
             onChange={(e) => setTime(e.target.value || null)}
           />
         </label>
+        {time && isBusy(time) ? <span className={s.conflict}>Это время занято другим занятием</span> : null}
       </div>
 
       <div className={s.custom}>

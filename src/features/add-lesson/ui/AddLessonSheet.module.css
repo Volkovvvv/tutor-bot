@@ -119,3 +119,9 @@
   font-weight: 600;
   font-variant-numeric: tabular-nums;
 }
+
+.conflict {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--danger);
+}

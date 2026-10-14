@@ -1,8 +1,7 @@
 import { useState } from 'react'
 import { currencySign } from '../../../shared/lib/format.js'
-import { Button, Field, FieldGroup, Input, Row, Segmented, Sheet } from '../../../shared/ui/index.js'
-
-const DURATIONS = [45, 60, 90, 120].map((value) => ({ value, label: `${value} мин` }))
+import { isValidDuration } from '../../../shared/lib/duration.js'
+import { Button, DurationField, Field, FieldGroup, Input, Row, Sheet } from '../../../shared/ui/index.js'
 
 /**
  * Перенос занятия, его длительность и цена. Меняется только это занятие:
@@ -15,7 +14,7 @@ export default function EditLessonSheet({ lesson, price, onSave, onClose }) {
   const [cost, setCost] = useState(String(price))
 
   // Цена может быть нулевой: пробное или подарочное занятие
-  const valid = Boolean(date && time) && cost !== '' && Number(cost) >= 0
+  const valid = Boolean(date && time) && isValidDuration(duration) && cost !== '' && Number(cost) >= 0
 
   const save = () => {
     if (!valid) return
@@ -38,7 +37,7 @@ export default function EditLessonSheet({ lesson, price, onSave, onClose }) {
         </Field>
       </Row>
       <FieldGroup label="Длительность">
-        <Segmented label="Длительность" options={DURATIONS} value={duration} onChange={setDuration} />
+        <DurationField value={duration} onChange={setDuration} />
       </FieldGroup>
       <Field label={`Цена, ${currencySign()}`}>
         <Input

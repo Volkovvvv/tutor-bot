@@ -4,6 +4,7 @@ export {
   createLesson,
   sortLessons,
   lessonsOn,
+  isTimeBusy,
   lessonEnd,
   lessonPrice,
   nextLesson,
