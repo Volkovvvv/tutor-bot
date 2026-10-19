@@ -17,6 +17,23 @@ async function bootstrap(): Promise<void> {
 
   app.setGlobalPrefix('api')
 
+  // Строка на запрос: без неё в логах не видно, дошёл ли человек до сервера
+  // и сколько он ждал. user проставляет guard, поэтому читаем его по завершении.
+  // OPTIONS (CORS-проверки браузера) и health шумят и ничего не говорят.
+  const httpLog = new Logger('HTTP')
+  app.use((req: Request & { user?: { userId?: string } }, res: Response, next: NextFunction) => {
+    const started = Date.now()
+    res.on('finish', () => {
+      if (req.method === 'OPTIONS' || req.originalUrl.startsWith('/api/health')) return
+      const path = req.originalUrl.split('?')[0]
+      const line = `${req.method} ${path} ${res.statusCode} ${Date.now() - started}ms user=${req.user?.userId ?? '-'} ip=${req.ip}`
+      if (res.statusCode >= 500) httpLog.error(line)
+      else if (res.statusCode >= 400) httpLog.warn(line)
+      else httpLog.log(line)
+    })
+    next()
+  })
+
   // Фото расписания не влезает в обычные 100 КБ тела запроса. Лимит поднят
   // только этому роуту: большое тело на любом другом — не наш клиент.
   // Стоит до парсера Nest — тот уже разобранное тело не трогает.

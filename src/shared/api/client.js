@@ -33,11 +33,39 @@ export class ApiError extends Error {
   }
 }
 
+// Обычный запрос укладывается в секунды; ИИ-материал и распознавание фото
+// сервер делает долго, им даём больше времени.
+const TIMEOUT_MS = 20_000
+const LONG_TIMEOUT_MS = 120_000
+const LONG_PATHS = /\/material($|\?)|\/import\/recognize/
+
+const NETWORK_MESSAGE =
+  'Нет связи с сервером. Проверьте интернет; если включён VPN — попробуйте выключить или сменить его'
+const TIMEOUT_MESSAGE =
+  'Сервер долго не отвечает. Проверьте интернет (или VPN) и повторите'
+
+// fetch без тайм-аута при блокировке сети может висеть минутами и без ошибки —
+// пользователь видит бесконечную загрузку. Здесь зависание превращается в ошибку.
+async function fetchWithTimeout(url, options, timeoutMs) {
+  const controller = new AbortController()
+  const timer = setTimeout(() => controller.abort(), timeoutMs)
+  try {
+    return await fetch(url, { ...options, signal: controller.signal })
+  } catch (e) {
+    if (e?.name === 'AbortError') throw new ApiError(0, TIMEOUT_MESSAGE)
+    // «Failed to fetch» / «Load failed» — ничего не говорят человеку
+    throw new ApiError(0, NETWORK_MESSAGE)
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
 async function request(path, options = {}) {
   const headers = { 'content-type': 'application/json', ...options.headers }
   if (token) headers.authorization = `Bearer ${token}`
 
-  const res = await fetch(`${API_URL}${path}`, { ...options, headers })
+  const timeout = LONG_PATHS.test(path) ? LONG_TIMEOUT_MS : TIMEOUT_MS
+  const res = await fetchWithTimeout(`${API_URL}${path}`, { ...options, headers }, timeout)
 
   if (res.status === 401) {
     // Токен истёк или недействителен — сбрасываем, чтобы приложение
@@ -80,12 +108,16 @@ export async function login() {
   if (!initData) {
     throw new ApiError(0, 'Приложение открыто не из Telegram — вход невозможен')
   }
-  const res = await fetch(`${API_URL}/auth/login`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    // Таймзона устройства: в ней сервер пишет время в напоминаниях
-    body: JSON.stringify({ initData, timezone: deviceTimezone() }),
-  })
+  const res = await fetchWithTimeout(
+    `${API_URL}/auth/login`,
+    {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      // Таймзона устройства: в ней сервер пишет время в напоминаниях
+      body: JSON.stringify({ initData, timezone: deviceTimezone() }),
+    },
+    TIMEOUT_MS
+  )
   if (!res.ok) {
     // Сервер намеренно не раскрывает, что именно не сошлось в подписи
     // (это помогало бы её подбирать), но код ответа стоит показать —

@@ -80,6 +80,13 @@
 
 .step.wait { opacity: 0.45; }
 
+.genHint {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 500;
+}
+
 .mark {
   flex: none;
   display: flex;

@@ -262,6 +262,7 @@ export default function LessonMaterial({
               <span>{label}</span>
             </div>
           ))}
+          <span className={s.genHint}>Составляю материал, это до минуты</span>
         </div>
       ) : showForm ? (
         <div className={s.card}>

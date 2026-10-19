@@ -57,6 +57,8 @@ export function useStore() {
   const [profile, setProfile] = useState(null)
   const [ready, setReady] = useState(false)
   const [authError, setAuthError] = useState(null)
+  // Счётчик попыток входа: «Повторить» увеличивает его и перезапускает boot
+  const [bootAttempt, setBootAttempt] = useState(0)
   // Ссылка приглашения по id ученика — сервер не хранит её на карточке,
   // только на выданном Invite. Живёт до перезагрузки страницы.
   const [inviteLinks, setInviteLinks] = useState(() => new Map())
@@ -74,6 +76,7 @@ export function useStore() {
     let cancelled = false
 
     async function boot() {
+      setAuthError(null)
       try {
         await login()
         const [studentsRes, lessonsRes, tutorRes] = await Promise.all([
@@ -96,7 +99,9 @@ export function useStore() {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [bootAttempt])
+
+  const retryBoot = useCallback(() => setBootAttempt((n) => n + 1), [])
 
   // Статус приглашения меняет бот сам, когда ученик жмёт /start — с сервера,
   // а не по действию в этом приложении. Опрашиваем раз в 15 секунд, пока
@@ -367,6 +372,7 @@ export function useStore() {
   return {
     ready,
     authError,
+    retryBoot,
     students,
     lessons,
     profile,

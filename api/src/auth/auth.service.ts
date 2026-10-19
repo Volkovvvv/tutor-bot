@@ -125,6 +125,8 @@ export class AuthService {
         .catch((e: Error) => this.logger.error(`Напоминания после смены таймзоны не перепланированы: ${e.message}`))
     }
 
+    this.logger.log(`Вход: user=${user.id} tgId=${tg.id}`)
+
     const payload: JwtPayload = { sub: user.id, tid: tutor.id }
 
     return {

@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { applyTheme, tg } from '../../shared/api/telegram.js'
 import { todayISO } from '../../shared/lib/date.js'
 import { setCurrency } from '../../shared/lib/format.js'
-import { AppShell, EmptyState, TabBar, Toast } from '../../shared/ui/index.js'
+import { AppShell, Button, EmptyState, TabBar, Toast } from '../../shared/ui/index.js'
 import { indexById } from '../../entities/student/index.js'
 import { TodayPage } from '../../pages/today/index.js'
 import { CalendarPage } from '../../pages/calendar/index.js'
@@ -21,6 +21,17 @@ import { backLabel, backPast, backTarget, LIST_VIEWS, openView, TABS } from '../
 
 export default function App() {
   const store = useStore()
+
+  // Загрузка дольше обычного — подсказываем про сеть, а не молча крутим «Загрузка…»
+  const [slowBoot, setSlowBoot] = useState(false)
+  useEffect(() => {
+    if (store.ready || store.authError) {
+      setSlowBoot(false)
+      return undefined
+    }
+    const id = setTimeout(() => setSlowBoot(true), 8000)
+    return () => clearTimeout(id)
+  }, [store.ready, store.authError])
   // Валюта по стране репетитора; экраны ниже читают её при рендере (см. shared/lib/format.js)
   setCurrency(store.profile?.country)
   const [view, setView] = useState({ name: 'today' })
@@ -160,7 +171,8 @@ export default function App() {
         <EmptyState title="Не удалось подключиться">
           {store.authError}
           <br />
-          Откройте приложение из Telegram и попробуйте ещё раз.
+          <br />
+          <Button onClick={store.retryBoot}>Повторить</Button>
         </EmptyState>
       </AppShell>
     )
@@ -169,7 +181,15 @@ export default function App() {
   if (!store.ready) {
     return (
       <AppShell>
-        <EmptyState>Загрузка…</EmptyState>
+        <EmptyState>
+          Загрузка…
+          {slowBoot ? (
+            <>
+              <br />
+              Долго грузится. Проверьте интернет; если включён VPN — попробуйте его выключить или сменить.
+            </>
+          ) : null}
+        </EmptyState>
       </AppShell>
     )
   }
